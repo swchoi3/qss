@@ -1,0 +1,153 @@
+---
+title: 'Exploration 7: Engaging with Alternative Explanations by 'Controlling For' Them"
+author: 'Jake Bowers'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+bibliography: classbib.bib
+fontsize: 10pt
+geometry: margin=1in
+mainfont: "Crimson Text"
+graphics: yes
+output:
+  html_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+  pdf_document:
+    latex_engine: xelatex
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+---
+
+<!-- Make this document using library(rmarkdown); render("exploration1.Rmd") -->
+\input{mytexsymbols}
+
+
+```{r include=FALSE, cache=FALSE}
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+# knitr settings to control how R chunks work.
+
+## To make the html file do
+## render("exploration1.Rmd",output_format=html_document(fig_retina=FALSE))
+## To make the pdf file do
+## render("exploration1.Rmd",output_format=pdf_document())
+
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",    # slightly smaller font for code
+  echo=TRUE,
+  results='markup',
+  strip.white=TRUE,
+  fig.path='figs/fig',
+  cache=FALSE,
+  highlight=TRUE,
+  width.cutoff=132,
+  size='footnotesize',
+  out.width='.9\\textwidth',
+  fig.retina=FALSE,
+  message=FALSE,
+  comment=NA)
+
+if(!file.exists('figs')) dir.create('figs')
+
+options(SweaveHooks=list(fig=function(){
+			   par(mar=c(3.5, 3, 1.1, 0),
+			       pty="s",
+			       mgp=c(1.5,0.5,0),
+			       oma=c(0,0,0,0))},
+			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
+			 options(prompt=" ")
+			 }),
+	digits=4,
+	scipen=8,
+	width=132
+	)
+options(error=function(){options(prompt="> ",continue="+ ");NULL})
+```
+
+"I hate matching!" When you answer the phone, it appears to be on speaker phone and you are listening to the middle of a conversation. Now your friend comes on, "Sorry. I was just talking with my boss. She really hates matching. I keep asking her why, and she says things like 'Propensity Score Matching Is Always Wrong' or 'There is no model! How can you learn with no model!'"
+
+"Right!" Says the other voice. "Plus matching is inherently about throwing away data. I hate to throw things away. And matching has too many choices. I hate choices."
+
+"So," your friend sounds a bit frazzled,"Can you help me learn about the effect of the Metrocable intervention without doing matching?"
+
+"Also I think that Achen was not serious! More control variables are better! Phooey on Cook's D or dfbetas!" The boss breaks in with a bought of yelling.
+
+"General X, do you even know what is means to 'control for' a variable in a linear way? Grouping like observations together is easy for me to understand, or running the analysis separately within groups which are the same on some variable that represents an alternative explanation also seems sensible."
+
+"Are you questioning my authoritar? Of course I know, I know that you tell R to control for those variables and then you don't have to worry about their effects on your estimate of the effect of the Metrocable intervention. After all you have 'controlled for' them. That is what controlling for means, it means that you don't worry anymore."
+
+"No. Not questioning your authority, just checking your statistical knowledge. We have to get this right, you know. Can I ask my friend to help us get it right?"
+
+"Of course! Getting it right is my middle name!"
+
+"So, General X, how do you propose we handle this problem:"
+
+```{r}
+library(RItools)
+library(optmatch)
+library(dplyr)
+load(url("http://jakebowers.org/Data/meddat.rda"))
+```
+
+
+```{r}
+## These get rates per 1000 from counts
+meddat<-mutate(meddat,
+	       HomRate03=(HomCount2003/Pop2003)*1000,
+	       HomRate08=(HomCount2008/Pop2008)*1000)
+```
+
+```{r}
+balfmla<-reformulate(c(names(meddat)[c(5:7,9:24)],"HomRate03"),response="nhTrt")
+
+xb1<-xBalance(balfmla,
+	      strata=list(raw=NULL),
+	      data=meddat,
+	      report=c("std.diffs","z.scores","adj.means",
+		       "adj.mean.diffs", "chisquare.test","p.values"))
+xb1$results
+xb1$results["HomRate03",,]
+```
+
+"Huh? What do those numbers mean? How is this Getting it Right?"
+
+"General X, those numbers show that the neighborhoods with the intervention had, on average, about 1.9 murders per 1000 people **before** the intervention, but the neighborhoods without the intervention only had, on average, about 1 murder per 1000 people. That is, differences in homicide rates in 2008 can easily be explained by the fact that the intervention units were already more violent."
+
+"So? That is the beauty and power of controlling for. I order you to 'control for'."
+
+You hear General X leave the room.
+
+"Ok" Your friend sighs. "I need to follow orders. So, I need an estimate of the
+effect of the intervention that doesn't use matching, but that does 'control
+for' appropriately. I also need to be able to explain what is going on to the
+rest of the high command. So, we have got to be more concrete about what
+controlling for means. Do you think that @bowers2011manifest Figure 32.4 and
+associated text or even the dataverse files @bowers2011dataverse helps? Or the
+idea of residualization? (I'm not sure what that means)."
+
+"I found this stuff on the internet about residualization, not at all sure how to apply it to the Metrocable study."
+
+```{r eval=FALSE}
+
+lm1<-lm(y~x1+x2+x3+z)
+
+residyfromx<-resid(lm(y~x1+x2+x3))
+residzfromx<-resid(lm(z~x1+x2+x3))
+
+lm2<-lm(residyfromx~residzfromx)
+
+all.equal(coef(lm1)["x1"],coef(lm2)[2])
+
+```
+
+"Can you find other discussions about what a linear model is doing when you put in control variables? Some people call this covariance adjustment. My team needs new resources, so, can you find a useful and clear discussion in some other textbook that you can use to help me explain how this works?"
+
+"Finally, I am worried about overly influential points. Can you at least let me know if we have any that I should be worried about? Say, using Cook's D or dfbetas?"
+
+
+
+
+# References
+
