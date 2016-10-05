@@ -147,10 +147,27 @@ variables, measured before the treatment are plausibly covariates.
 ## Some commands like a formula object:
 balfmla<-reformulate(c(names(meddat)[c(5:7,9:24)],"HomRate03"),response="nhTrt")
 
+xb0<-xBalance(balfmla,
+	      strata=list(raw=NULL),
+	      data=meddat,
+	      report=c("std.diffs","z.scores","adj.means",
+		       "adj.mean.diffs", "chisquare.test","p.values"))
+
 ## Scalar distance on baseline outcome
 tmp <- meddat$HomRate03
 names(tmp) <- rownames(meddat)
 absdist <- match_on(tmp, z = meddat$nhTrt)
+
+fm0 <- fullmatch(absdist ,data=meddat)
+summary(fm0)
+
+xb0a<-xBalance(balfmla,
+	      strata=list(raw=NULL,fm0=~fm0),
+	      data=meddat,
+	      report=c("std.diffs","z.scores","adj.means",
+		       "adj.mean.diffs", "chisquare.test","p.values"))
+
+meddat %>% group_by(fm0) %>% summarize(diff=mean(HomRate03[nhTrt==1])-mean(HomRate03[nhTrt==0]),n=n())
 
 ## Ordinary Propensity score
 glm1<-glm(balfmla,data=meddat,family=binomial)
@@ -163,6 +180,7 @@ cv.glmnet1<-cv.glmnet(x=X[,-1],y=meddat$nhTrt,family="binomial",alpha=.5)
 ## Add scores back to data
 meddat$pscore<-predict(glm1) ## linear.predictors not probs
 meddat$penpscore<-predict(cv.glmnet1$glmnet.fit,newx=X[,-1],s=cv.glmnet1$lambda.min)
+coef(cv.glmnet1$glmnet.fit,newx=X[,-1],s=cv.glmnet1$lambda.min)
 
 ## Make distance matrices
 psdist<-match_on(nhTrt~pscore,data=meddat)
@@ -180,7 +198,7 @@ with(meddat,boxplot(split(penpscore,nhTrt)))
 mhdist<-match_on(balfmla,data=meddat,method="rank_mahalanobis")
 
 ## Do it
-fm1<-fullmatch(IHATEMYJOB,data=meddat) ##, min.controls=1) # min.controls=.5
+fm1<-fullmatch(mhdist,data=meddat) ##, min.controls=1) # min.controls=.5
 summary(fm1,data=meddat,min.controls=0,max.controls=Inf)
 
 ## Add matched set indicators back to data
@@ -188,7 +206,7 @@ meddat$fm1<-NULL
 meddat[names(fm1),"fm1"]<-fm1
 
 ## We have to show that we have adjusted enough. Did we adjust enough?
-newbalfmla <- update(balfmla,.~.+GETMEOUTOFHERESCORE)
+newbalfmla <- update(balfmla,.~.+pscore)
 xb1<-xBalance(newbalfmla,
 	      strata=list(raw=NULL,fm1=~fm1),
 	      data=meddat,
@@ -220,7 +238,10 @@ as.matrix(absdist)[1:5,1:5]
 as.matrix(mhdist)[1:5,1:5]
 as.matrix(caldist)[1:5,1:5]
 
-fm2<-fullmatch(MYBOSSSUX,data=meddat,tol=.00001,min.controls=1)
+quantile(as.vector(penpsdist),seq(0,1,.1))
+quantile(as.vector(mhdist),seq(0,1,.1))
+fm2<-fullmatch(psdist+caliper(absdist,2)+caliper(mhdist,50),data=meddat,tol=.00001,min.controls=1)
+summary(fm2)
 
 meddat$fm2<-NULL
 meddat[names(fm2),"fm2"]<-fm2
@@ -234,6 +255,19 @@ xb2$overall
 xb2$results["HomRate03",,]
 xb2$results["pscore",,]
 @
+
+```{r}
+
+outcome1<-xBalance(nhTrt~HomRate08,
+	      strata=list(raw=NULL,fm1=~fm1,fm2=~fm2),
+	      data=meddat,
+	      report=c("std.diffs","z.scores","adj.means",
+		       "adj.mean.diffs", "chisquare.test","p.values"))
+
+lm1<-lm(HomRate08~nhTrt+fm2,data=meddat)
+coef(lm1)["nhTrt"]
+```
+
 
 # References
 
