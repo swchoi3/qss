@@ -142,6 +142,36 @@ all.equal(coef(lm1)["x1"],coef(lm2)[2])
 
 ```
 
+```{r eval=FALSE}
+
+lm1<-lm(HomRate08~nhTrt+nhAboveHS,data=meddat)
+
+residHomRate08fromx<-resid(lm(HomRate08~nhAboveHS,data=meddat))
+residzfromx<-resid(lm(nhTrt~nhAboveHS,data=meddat))
+
+lm2<-lm(residHomRate08fromx~residzfromx)
+
+all.equal(coef(lm1)[2],coef(lm2)[2],check.attributes=FALSE)
+
+par(mfrow=c(2,2))
+with(meddat,plot(nhAboveHS,HomRate08))
+abline(lm(HomRate08~nhAboveHS,data=meddat))
+with(meddat,plot(nhAboveHS,residHomRate08fromx))
+##abline(h=0)
+lm(residHomRate08fromx ~nhAboveHS,data=meddat)
+abline(lm(residHomRate08fromx ~nhAboveHS,data=meddat))
+
+with(meddat,plot(nhAboveHS,nhTrt))
+abline(lm(nhTrt~nhAboveHS,data=meddat))
+with(meddat,plot(nhAboveHS,residzfromx))
+abline(lm(residzfromx~nhAboveHS,data=meddat))
+
+plot(residzfromx,residHomRate08fromx)
+abline(lm2)
+
+
+```
+
 "Can you find other discussions about what a linear model is doing when you put in control variables? Some people call this covariance adjustment. My team needs new resources, so, can you find a useful and clear discussion in some other textbook that you can use to help me explain how this works?"
 
 "Finally, I am worried about overly influential points. Can you at least let me know if we have any that I should be worried about? Say, using Cook's D or dfbetas?"
