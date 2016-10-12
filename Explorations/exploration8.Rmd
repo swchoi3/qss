@@ -1,0 +1,124 @@
+---
+title: |
+ | Exploration 8: Engaging with Alternative Explanations with Other Design Strategies: 
+ | Difference in differences, Instrumental Variables
+author: 'Jake Bowers'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+bibliography: classbib.bib
+fontsize: 10pt
+geometry: margin=1in
+mainfont: "Crimson Text"
+graphics: yes
+output:
+  html_document:
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+  pdf_document:
+    latex_engine: xelatex
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+---
+
+<!-- Make this document using library(rmarkdown); render("exploration1.Rmd") -->
+\input{mytexsymbols}
+
+
+```{r include=FALSE, cache=FALSE}
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+# knitr settings to control how R chunks work.
+
+## To make the html file do
+## render("exploration1.Rmd",output_format=html_document(fig_retina=FALSE))
+## To make the pdf file do
+## render("exploration1.Rmd",output_format=pdf_document())
+
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",    # slightly smaller font for code
+  echo=TRUE,
+  results='markup',
+  strip.white=TRUE,
+  fig.path='figs/fig',
+  cache=FALSE,
+  highlight=TRUE,
+  width.cutoff=132,
+  size='footnotesize',
+  out.width='.9\\textwidth',
+  fig.retina=FALSE,
+  message=FALSE,
+  comment=NA)
+
+if(!file.exists('figs')) dir.create('figs')
+
+options(SweaveHooks=list(fig=function(){
+			   par(mar=c(3.5, 3, 1.1, 0),
+			       pty="s",
+			       mgp=c(1.5,0.5,0),
+			       oma=c(0,0,0,0))},
+			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
+			 options(prompt=" ")
+			 }),
+	digits=4,
+	scipen=8,
+	width=132
+	)
+options(error=function(){options(prompt="> ",continue="+ ");NULL})
+```
+
+"Hey! I know that you have been working so hard  to help me, but the work is
+just continuing! I've been asked to provide a difference-in-differences
+estimate of the effect of the Metrocable intervention violence in those
+Medellin neighborhoods. Some folks are saying that this method, which I don't
+understand, is better than comparing neighborhoods in terms of their outcomes
+after matching on covariates, let alone using a linear model with those same
+covariates to adjust for confounding. Can you please do this and explain to me
+what it is and what it's strengths and weaknesses are? I think that you can
+combine this and matching, but I'm not sure. Some of the resources on
+difference-in-differences suggest a linear model based approach, others might
+suggest doing the original matching but using a change score as an outcome (or
+even a covariance adjusted effect for baseline outcomes in addition to matched
+sets). When should I use which difference-in-differences approach? Can you
+provide a difference-in-differences estimate, explain how you did it, and why,
+in plain language that I can use with my team and bosses?"
+
+
+"Thanks for that! Now I have another problem. I have been hired to report on
+the effect of an in-person get out the vote visit on voting turnout. To
+simplify my life, I'm using a dataset from this famous paper
+<https://sites.google.com/site/donaldpgreen/new-haven> and I'm focusing only on
+people who live alone (you can be proud of my growing R skills):"
+
+
+```{r}
+library(foreign)
+library(dplyr)
+nhIndiv<-read.dta("http://jakebowers.org/Data/NHrep_individual.dta")
+vote98dat<-filter(nhIndiv,persons==1)
+```
+
+"Someone said I can get the Intent to Treat Effect like so:"
+
+```{r}
+lm1<-lm(v98~persngrp,data=vote98dat)
+coef(lm1)["persngrp"]
+```
+
+"But I want to know the effect of talking with a canvasser. I gather that I can
+do this using two stage least squares, or via some division of that ITT effect.
+But that I have to make a bunch of assumptions. I forget what they are, why
+they matter, or whether they might be easy or hard to believe in this case.
+Furthermore, I'm wondering why I am not supposed to do any controlling for,
+matching, etc.. in this case. (I mean, the data don't have much in the way of
+covariates, so this is good, but I know that the kinds of people who open the
+door to a canvasser differ from those who do not open the door or who are not
+home, and I worry that such a comparison would cause bias.). Please help me
+understand why I don't need to do lots of work to control for other variables
+in this case, and, of course, please give me an estimate of the effect of
+talking with  canvasser on the outcome."
+
+
+# References
+
