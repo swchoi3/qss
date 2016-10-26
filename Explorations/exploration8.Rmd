@@ -103,7 +103,24 @@ vote98dat<-filter(nhIndiv,persons==1)
 
 ```{r}
 lm1<-lm(v98~persngrp,data=vote98dat)
-coef(lm1)["persngrp"]
+itt<-coef(lm1)["persngrp"]
+
+compliance<-mean(vote98dat$cntany)
+itt/compliance
+
+stage1<-lm(cntany~persngrp,data=vote98dat)
+coef(stage1)[2]
+predstage1 <- predict(stage1)
+stage2<-lm(v98~predstage1,data=vote98dat)
+coef(stage2)
+
+library(sem)
+twostage<-tsls(v98~cntany,instruments=~persngrp,data=vote98dat)
+coef(twostage)
+
+itt <- cov(vote98dat[,c("v98","persngrp")])[1,2]
+denom <- cov(vote98dat[,c("cntany","persngrp")])[1,2]
+
 ```
 
 "But I want to know the effect of talking with a canvasser. I gather that I can
