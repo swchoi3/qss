@@ -68,12 +68,67 @@ options(SweaveHooks=list(fig=function(){
 options(error=function(){options(prompt="> ",continue="+ ");NULL})
 ```
 
+
+"I just read something super scary: 'The empirical evidence shows that larger
+transfers increase observed corruption and reduce the average education of
+candidates for mayor.'! That is what @brollo2013political say happens in
+Brasil: that money given to cities to help the poor basically increased
+corruption! I'm writing now because I'm very confused: I immediately began to
+think about the ways in which municipalities that receive money may differ from
+municipalities that do not receive such funds. Might the money be aiming to
+reduce corruption? (i.e. be caused by corruption?) Or might corruption be more
+prevalent in places with citizens with less capacity (i.e. poorer places,
+places more in need of federal funding)? That is, it was easy for me to come up
+with alternative explanations for their finding. However, those authors told me
+that they had taken care of all extant alternative explanations. And I said,
+'Oh yeah? I bet you are just relying on functional form assumptions and
+probably have terrible influential point problems that are both completely
+misleading us all.' And they said, 'Not at all. We are using a regression
+discontinuity design and so we don't have to control for covariates.'"
+
+"Then I did a some hunting around, but mainly managed to confused myself. Can you explain why they think that they don't have to control for covariates? They must have to make some assumptions, right? I mean, this idea that you can find some clever discontinuity feels a lot like the instrumental variable approach. Moreover, I also ran across @cattaneo2016interpreting's reanalysis of their paper. Can you explain their general insight? 
+
+Since I keep my data setup work in a different file from my analysis work
+(following @bowers2016future), I'm including it here.
+
+> datasetup.R
+
 ```{r}
 library(readstata13)
-dat <- read.dta13("http://jakebowers.org/Data/CatteneoEtAl2016/data-population-example.dta", convert.factors=FALSE)
+dat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/data-population-example.dta", convert.factors=FALSE)
 attr(dat,"var.labels")
 
 ```
+
+```{r}
+brollodat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/AER_smallsample.dta",convert.factors=FALSE)
+stopifnot(all.equal(dat$x,brollodat$pop))
+length(unique(dat$x))
+length(unique(brollodat$pop))
+## Restrict attention to only municipalities with unique population numbers so that we can use the covariates from the Brollo et al paper.
+
+uniqdat <- dat[!duplicated(dat$x),]
+uniqbrollodat <- brollodat[!duplicated(brollodat$pop),]
+stopifnot(all.equal(uniqdat$x,uniqbrollodat$pop))
+
+## Merge the covariates from the Brollo et al paper onto the original dataset
+## bigdat <- merge(uniqdat,uniqbrollodat,by.x="x",by.y="pop",all=TRUE)
+library(dplyr)
+## dplyr functions are often faster than base R functions
+uniqdat$pop <- uniqdat$x ## to allow both data frames to have same key name
+stopifnot(intersect(names(uniqdat),names(uniqbrollodat))=="pop")
+bigdat <- inner_join(uniqdat,uniqbrollodat,by="pop")
+stopifnot(nrow(bigdat)==nrow(uniqdat))
+stopifnot(nrow(bigdat)==nrow(uniqbrollodat))
+stopifnot(all.equal(bigdat$pop,bigdat$x))
+save(bigdat,file="bigdat.rda")
+```
+
+
+> analysis.Rmd
+
+> Here are some of my notes:  Step 1: Assess window size. Maybe DCdensity in package rdd givn sec 2.3 in Sales and Hansen?? Is our running variable discrete? Yes in fact. No in principle. Right? I don't know if disbursements were chunky or continuous at the federal level. Or maybe better specification test style approach of Sales and Hansen ion sec 3.2 sec 4 
+
 
 
 # References
