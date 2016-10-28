@@ -86,21 +86,31 @@ probably have terrible influential point problems that are both completely
 misleading us all.' And they said, 'Not at all. We are using a regression
 discontinuity design and so we don't have to control for covariates.'"
 
-"Then I did a some hunting around, but mainly managed to confused myself. Can you explain why they think that they don't have to control for covariates? They must have to make some assumptions, right? I mean, this idea that you can find some clever discontinuity feels a lot like the instrumental variable approach. Moreover, I also ran across @cattaneo2016interpreting's reanalysis of their paper. Can you explain their general insight? 
+"Then I did a some hunting around, but mainly managed to confused myself. Can
+you explain why they think that they don't have to control for covariates? They
+must have to make some assumptions, right? I mean, this idea that you can find
+some clever discontinuity feels a lot like the instrumental variable approach.
+Moreover, I also ran across @cattaneo2016interpreting's reanalysis of this
+paper. Can you explain their general insight and difference from the original
+analysis? Can you show me that the municipalities in the areas chosen for focus
+around the discontinuities have covariate balance? If they don't, what window
+should we choose? Or should we do some matching in addition to window choosing?
+How might you calculate a treatment effect in this case?"
 
 Since I keep my data setup work in a different file from my analysis work
-(following @bowers2016future), I'm including it here.
+(following @bowers2016future), I'm including it here. As you can see, I merged
+two files together.
 
 > datasetup.R
 
-```{r}
+```{r, cache=TRUE}
 library(readstata13)
 dat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/data-population-example.dta", convert.factors=FALSE)
 attr(dat,"var.labels")
 
 ```
 
-```{r}
+```{r, cache=TRUE}
 brollodat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/AER_smallsample.dta",convert.factors=FALSE)
 stopifnot(all.equal(dat$x,brollodat$pop))
 length(unique(dat$x))
@@ -127,7 +137,22 @@ save(bigdat,file="bigdat.rda")
 
 > analysis.Rmd
 
-> Here are some of my notes:  Step 1: Assess window size. Maybe DCdensity in package rdd givn sec 2.3 in Sales and Hansen?? Is our running variable discrete? Yes in fact. No in principle. Right? I don't know if disbursements were chunky or continuous at the federal level. Or maybe better specification test style approach of Sales and Hansen ion sec 3.2 sec 4 
+> Here are some of my notes:  Step 1: Assess window size. Maybe DCdensity in
+> package rdd givn sec 2.3 in Sales and Hansen?? Or xBalance? Is our running
+> variable discrete? Yes in fact. No in principle. Right? I don't know if
+> disbursements were chunky or continuous at the federal level. Or maybe better
+> specification test style approach of Sales and Hansen ion sec 3.2 sec 4?? So
+> confusing!
+
+```{r}
+rm(list=ls()) ## removes all existing objects in the working memory
+load("bigdat.rda")
+## Treatment indicator for first discontinuiity of 10189
+## Other discontinuities: 13585, 16981, 23773, 30565, 37356, 44148
+bigdat$z10189 <- as.numeric(bigdat$x>=10189)
+mean(bigdat$y[bigdat$z10189==1 & bigdat$cutoff_10189==1]) - mean(bigdat$y[bigdat$z10189==0 & bigdat$cutoff_10189==1])
+lm(y~z10189,data=bigdat,subset=cutoff_10189==1)
+```
 
 
 
