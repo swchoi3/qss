@@ -1,0 +1,17 @@
+
+@bowers-grad-stats-illinois/530-students On Nov 15 and Nov 29 we will be talking about **your** questions and **your** data (or fake data, or data you've downloaded because you want to replicate and extend and investigate some other work).
+
+I propose the following structure for your individual data explorations. (One due from each of you, the evening before class on Nov 15 and Nov 29.). The general idea is to use and further explore the techniques that you've learned about so far in the class. For example:
+
+1.  What is the substantive idea at stake? (2 to 3 sentences. "A large literature claims that democracy causes peace. The idea is that democracy in domestic politics does [something important] to [cause peaceful behavior by leader]."
+
+2. Your plan to use comparisons to learn about the substantive idea/explanation/theory: "I assess the theoretical link between internal decision making organization and external inter-organizational relations by comparing English football fan organizations before and after the FIFA Y'all Get Democratic ruling, in which, all of a sudden, FIFA said that any official football (aka soccer) fan organization must be organized internally in a democratic fashion or its members would be banned from football stadiums. I will show that this ruling created a discontinuity in internal organization of fan clubs such that before-vs-after comparisons can be treated 'as-if-randomized' after stratifying by region and division of team."
+
+3. The data description that is relevant to the plan to use observation to learn about a theoretical expectation. ("There are 102 football clubs in England. Before the ruling 50 of them had 'pitch kings' who, in essence, were the founders and dictatorial rulers of the clubs. While the other 50 had a variety of other forms of internal organization. The clubs tended to be involved in a wide variety of hostilities towards one another [examples]. These behaviors are the outcomes in this study. ....")
+
+4.  An analysis that allows for falsification of the primary focused comparison (i.e. we will have learned that democracy might not always cause peace if we see no change or negative change before versus after the discontinuity, within a small window...). This analysis, or perhaps additional analyses, which engage with alternative explanations for any found relationship ("Even though we did find a positive before versus after relationship that is consistent with the democracy and peace argument, some might say that all of the clubs knew that the ruling was created especially to diminish violence. Thus, we are not seeing peace as a result of internal organization, but we are seeing peace as a result of a central coercive governing body. To engage with this concern, we do [the following].") 
+
+5. Optional: a test of the null hypothesis of no effects.
+
+
+
