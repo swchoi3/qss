@@ -1,0 +1,150 @@
+---
+title: 'Exploration 10: Fisher's Randomization-Based Hypothesis Test: The Fundamental p-value'
+author: 'Jake Bowers'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+bibliography: classbib.bib
+graphics: yes
+output:
+  html_document:
+    graphics: yes
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+  pdf_document:
+    graphics: yes
+    fig_caption: yes
+    fig_height: 4
+    fig_width: 4
+  word_document:
+    fig_height: 3
+    fig_width: 5
+---
+
+
+```{r include=FALSE, cache=FALSE}
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+# knitr settings to control how R chunks work.
+
+## To make the html file do
+## render("exploration4.Rmd",output_format=html_document(fig_retina=FALSE))
+## To make the pdf file do
+## render("exploration4.Rmd",output_format=pdf_document())
+
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small",    # slightly smaller font for code
+  echo=TRUE,
+  results='markup',
+  strip.white=TRUE,
+  fig.path='figs/fig',
+  cache=FALSE,
+  highlight=TRUE,
+  width.cutoff=132,
+  size='footnotesize',
+  out.width='.9\\textwidth',
+  message=FALSE,
+  comment=NA)
+```
+
+
+```{r initialize,echo=FALSE}
+##First, just setup the R environment for today:
+if(!file.exists('figs')) dir.create('figs')
+
+options(SweaveHooks=list(fig=function(){
+			   par(mar=c(3.5, 3, 1.1, 0),
+			       pty="s",
+			       mgp=c(1.5,0.5,0),
+			       oma=c(0,0,0,0))},
+			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
+			 options(prompt=" ")
+			 }),
+	digits=4,
+	scipen=8,
+	width=132
+	)
+options(error=function(){options(prompt="> ",continue="+ ");NULL})
+```
+
+The campaign consultant calls back. First, she is worried about the following
+analysis of a field experiment that randomly assigned newspaper advertisements
+within pairs of similar cities. "Before my analyst quit, she said that this I
+should do a 'randomization-based test' of the 'sharp-null hypothesis of no
+effects'. And she left the follwing code. Can you fix this and explain it to
+me? I was also reading a bit and I think that a test statistic that uses an
+M-estimator instead of a difference of means should have more power here (i.e.
+should produce smaller $p$-values). Don't you? Further, I don't really
+understand what a $p$-value **is** or how to interpret it. What should I make
+of the two $p$-values that you produce below?"
+
+
+```{r}
+news.df<-read.csv("http://jakebowers.org/Data/news.df.csv")
+news.df$sF<-factor(news.df$s)
+```
+
+
+```{r chunk1, eval=FALSE}
+library(randomizr) ## for the block_ra function
+
+meandiffTZ<-function(Y,Z,S){
+	## Y: outcome
+	## Z: binary treatment
+	## S: Stratum or pair
+	Ymd <- Y - ave(Y,S)
+	## result <- mean(Ymd[Z==1]) - mean(Ymd[Z==0])
+	## results <- coef(lm(Ymd ~ Z,data=news.df))[["Z"]]
+	return(result)
+}
+
+
+newExp<-function(S){
+	##S: pair or blocking factor, assumes 2 treatments with equal probability
+	block_ra(S)
+}
+
+##pair.assignment<-function(pair,z){
+##  ## A function to randomly assign treatment within pair
+##  unsplit(lapply(split(z,pair),sample),pair)
+##}
+
+nsims <- 4800 ## 16*300
+set.seed(20161101)
+nullDist <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=newExp(news.df$sF),S=news.df$sF))
+
+obsTZ <- meandiffTZ(Y=news.df$r,Z=news.df$z,S=news.df$sF)
+
+## What would Fisher say?
+prod(rep(choose(2,1),4))
+1/prod(rep(choose(2,1),4)) ## we should see each result with this prob or a multiple of it
+
+## Our computational approach?
+length(unique(nullDist))
+table(nullDist)
+table(nullDist)/nsims
+print(obsTZ)
+
+sum(nullDist >= obsTZ)/nsims
+## same as mean(nullDist >= obsTZ)
+```
+
+"Now that you've produced two different randomization-based $p$-values, can you
+explain how to interpret them? Do they tell us the probability of seeing an
+effect of 1.5 percentage points of turnout? How do they relate to this idea
+posited by one of my bosses when she said, 'I don't believe you when you say
+that the effect was really 1.5. If you were to run this experiment again, I bet
+you'd get a number closer to zero.'"
+
+"Finally, can you tell me what I need to assume here? Is it something like
+heteroskedasticity, normality, linearity, large samples/asymptotia? Or
+something? I can't bother to read Fisher or Rosenbaum,  but I know that
+statistical inference, as opposed to descriptive inference, always requires
+lots and lots of assumptions and you have to memorize, right? What makes
+Fisher's method work? How does this procedure represent the idea of no effects?
+Basically, I have lots of questions and I want to be able to show stars next to
+my results. Help me!"
+
+## References
+
+
