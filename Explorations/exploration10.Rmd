@@ -94,9 +94,16 @@ meandiffTZ<-function(Y,Z,S){
 	## S: Stratum or pair
 	Ymd <- Y - ave(Y,S)
 	## result <- mean(Ymd[Z==1]) - mean(Ymd[Z==0])
-	## results <- coef(lm(Ymd ~ Z,data=news.df))[["Z"]]
+	##result <- coef(lm(Ymd ~ Z,data=news.df))[["Z"]]
+        ## result <- coef(lmrob(Ymd ~ Z,data=news.df, control=robctrl))[["Z"]] 
 	return(result)
 }
+
+library(robust)
+robctrl <- lmrob.control(setting = "KS2014", maxit.scale=1000, k.max=1000, k.m_s=100,
+	  numpoints=8, max.it = 1000, solve.tol=1e-06,
+	  rel.tol=1e-06, refine.tol=1e-06) ## Recommended for smaller samples
+
 
 
 newExp<-function(S){
@@ -112,8 +119,12 @@ newExp<-function(S){
 nsims <- 4800 ## 16*300
 set.seed(20161101)
 nullDist <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=newExp(news.df$sF),S=news.df$sF))
+nullDistBad <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=sample(news.df$z),S=rep(1,8)))
+## M-estimator
+nullDistM <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=newExp(news.df$z),S=news.df$sF))
 
 obsTZ <- meandiffTZ(Y=news.df$r,Z=news.df$z,S=news.df$sF)
+obsTZM <- meandiffTZ(Y=news.df$r,Z=news.df$z,S=news.df$sF)
 
 ## What would Fisher say?
 prod(rep(choose(2,1),4))
