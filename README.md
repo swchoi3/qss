@@ -8,6 +8,8 @@ Just added the class? Remember to ask to join the `students` team. Also make sur
 # Explorations
 These assignments are designed to enable engagement and practice with the concepts of applied statistics.
 
+You may need to `install("renv")` before things work on your own computer (in regards libraries used in the explorations).
+
 ### Git and github
 Register for a github account and get comfortable with using git. [What is git/github][git-tour]? If you're having some trouble understanding or using git, read [this **presentation** from a UIUC stat student][coatless-presentation].
 
