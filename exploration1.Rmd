@@ -115,6 +115,7 @@ this variable? What might they be? What do they look like?"
 ```{r deltaforce1robustdescription, results='hide'}
 mean(wrkdat$hlphrs, trim = .1, na.rm = TRUE)
 hlp_vec <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
+mean(hlp_vec, trim = .1, na.rm = FALSE)
 library(psych)
 winsor.mean(hlp_vec)
 library(robustHD)
