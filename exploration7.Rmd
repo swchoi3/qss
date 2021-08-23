@@ -34,36 +34,47 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  fig.retina = FALSE,
+  message = FALSE,
+  comment = NA
+)
 
-if(!file.exists('figs')) dir.create('figs')
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 "I hate matching!" When you answer the phone, it appears to be on speaker phone and you are listening to the middle of a conversation. Now your friend comes on, "Sorry. I was just talking with my boss. She really hates matching. I keep asking her why, and she says things like 'Propensity Score Matching Is Always Wrong' or 'There is no model! How can you learn with no model!'"
@@ -94,21 +105,25 @@ load(url("http://jakebowers.org/Data/meddat.rda"))
 
 ```{r}
 ## These get rates per 1000 from counts
-meddat<-mutate(meddat,
-	       HomRate03=(HomCount2003/Pop2003)*1000,
-	       HomRate08=(HomCount2008/Pop2008)*1000)
+meddat <- mutate(meddat,
+  HomRate03 = (HomCount2003 / Pop2003) * 1000,
+  HomRate08 = (HomCount2008 / Pop2008) * 1000
+)
 ```
 
 ```{r}
-balfmla<-reformulate(c(names(meddat)[c(5:7,9:24)],"HomRate03"),response="nhTrt")
+balfmla <- reformulate(c(names(meddat)[c(5:7, 9:24)], "HomRate03"), response = "nhTrt")
 
-xb1<-xBalance(balfmla,
-	      strata=list(raw=NULL),
-	      data=meddat,
-	      report=c("std.diffs","z.scores","adj.means",
-		       "adj.mean.diffs", "chisquare.test","p.values"))
+xb1 <- xBalance(balfmla,
+  strata = list(raw = NULL),
+  data = meddat,
+  report = c(
+    "std.diffs", "z.scores", "adj.means",
+    "adj.mean.diffs", "chisquare.test", "p.values"
+  )
+)
 xb1$results
-xb1$results["HomRate03",,]
+xb1$results["HomRate03", , ]
 ```
 
 "Huh? What do those numbers mean? How is this Getting it Right?"
@@ -131,45 +146,42 @@ idea of residualization? (I'm not sure what that means)."
 
 ```{r eval=FALSE}
 
-lm1<-lm(y~x1+x2+x3+z)
+lm1 <- lm(y ~ x1 + x2 + x3 + z)
 
-residyfromx<-resid(lm(y~x1+x2+x3))
-residzfromx<-resid(lm(z~x1+x2+x3))
+residyfromx <- resid(lm(y ~ x1 + x2 + x3))
+residzfromx <- resid(lm(z ~ x1 + x2 + x3))
 
-lm2<-lm(residyfromx~residzfromx)
+lm2 <- lm(residyfromx ~ residzfromx)
 
-all.equal(coef(lm1)["x1"],coef(lm2)[2])
-
+all.equal(coef(lm1)["x1"], coef(lm2)[2])
 ```
 
 ```{r eval=FALSE}
 
-lm1<-lm(HomRate08~nhTrt+nhAboveHS,data=meddat)
+lm1 <- lm(HomRate08 ~ nhTrt + nhAboveHS, data = meddat)
 
-residHomRate08fromx<-resid(lm(HomRate08~nhAboveHS,data=meddat))
-residzfromx<-resid(lm(nhTrt~nhAboveHS,data=meddat))
+residHomRate08fromx <- resid(lm(HomRate08 ~ nhAboveHS, data = meddat))
+residzfromx <- resid(lm(nhTrt ~ nhAboveHS, data = meddat))
 
-lm2<-lm(residHomRate08fromx~residzfromx)
+lm2 <- lm(residHomRate08fromx ~ residzfromx)
 
-all.equal(coef(lm1)[2],coef(lm2)[2],check.attributes=FALSE)
+all.equal(coef(lm1)[2], coef(lm2)[2], check.attributes = FALSE)
 
-par(mfrow=c(2,2))
-with(meddat,plot(nhAboveHS,HomRate08))
-abline(lm(HomRate08~nhAboveHS,data=meddat))
-with(meddat,plot(nhAboveHS,residHomRate08fromx))
-##abline(h=0)
-lm(residHomRate08fromx ~nhAboveHS,data=meddat)
-abline(lm(residHomRate08fromx ~nhAboveHS,data=meddat))
+par(mfrow = c(2, 2))
+with(meddat, plot(nhAboveHS, HomRate08))
+abline(lm(HomRate08 ~ nhAboveHS, data = meddat))
+with(meddat, plot(nhAboveHS, residHomRate08fromx))
+## abline(h=0)
+lm(residHomRate08fromx ~ nhAboveHS, data = meddat)
+abline(lm(residHomRate08fromx ~ nhAboveHS, data = meddat))
 
-with(meddat,plot(nhAboveHS,nhTrt))
-abline(lm(nhTrt~nhAboveHS,data=meddat))
-with(meddat,plot(nhAboveHS,residzfromx))
-abline(lm(residzfromx~nhAboveHS,data=meddat))
+with(meddat, plot(nhAboveHS, nhTrt))
+abline(lm(nhTrt ~ nhAboveHS, data = meddat))
+with(meddat, plot(nhAboveHS, residzfromx))
+abline(lm(residzfromx ~ nhAboveHS, data = meddat))
 
-plot(residzfromx,residHomRate08fromx)
+plot(residzfromx, residHomRate08fromx)
 abline(lm2)
-
-
 ```
 
 "Can you find other discussions about what a linear model is doing when you put in control variables? Some people call this covariance adjustment. My team needs new resources, so, can you find a useful and clear discussion in some other textbook that you can use to help me explain how this works?"

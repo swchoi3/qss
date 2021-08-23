@@ -34,47 +34,58 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  fig.retina = FALSE,
+  message = FALSE,
+  comment = NA
+)
 ```
 
 
 ```{r initialize,echo=FALSE}
-##First, just setup the R environment for today:
-if(!file.exists('figs')) dir.create('figs')
+## First, just setup the R environment for today:
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 
 ```{r datasetup, cache=TRUE}
-download.file("http://jakebowers.org/Data/ANES/anes_pilot_2016_csv.zip",destfile="anespilot2016.csv.zip")
+download.file("http://jakebowers.org/Data/ANES/anes_pilot_2016_csv.zip", destfile = "anespilot2016.csv.zip")
 unzip("anespilot2016.csv.zip")
-anespi16<-read.csv("anes_pilot_2016.csv",as.is=TRUE,strip.white=TRUE)
+anespi16 <- read.csv("anes_pilot_2016.csv", as.is = TRUE, strip.white = TRUE)
 ```
 
 You friend calls back. "I really appreciated all of the work that you did with
@@ -100,26 +111,26 @@ comments?"
 "I started to try to calm the waters in my team, but I only go this far."
 
 ```{r}
-table(anespi16$fttrump,useNA="ifany")
-table(anespi16$birthyr,useNA="ifany")
+table(anespi16$fttrump, useNA = "ifany")
+table(anespi16$birthyr, useNA = "ifany")
 
-anespi16$fttrump[anespi16$fttrump==998]<-NA
-anespi16$age <- 2016-anespi16$birthyr
+anespi16$fttrump[anespi16$fttrump == 998] <- NA
+anespi16$age <- 2016 - anespi16$birthyr
 
 summary(anespi16$age)
 summary(anespi16$fttrump)
 summary(anespi16$lcself)
-anespi16$libcon <- ifelse(anespi16$lcself==8,NA,anespi16$lcself)
+anespi16$libcon <- ifelse(anespi16$lcself == 8, NA, anespi16$lcself)
 
-res <- sapply(1:7,function(lc){
-		      coef(lm(fttrump~age,data=anespi16,subset=libcon==lc))
-	})
+res <- sapply(1:7, function(lc) {
+  coef(lm(fttrump ~ age, data = anespi16, subset = libcon == lc))
+})
 colnames(res) <- 1:7
 
 library(MASS)
-res2 <- sapply(1:7,function(lc){
-		      coef(rlm(fttrump~age,data=anespi16,subset=libcon==lc))
-	})
+res2 <- sapply(1:7, function(lc) {
+  coef(rlm(fttrump ~ age, data = anespi16, subset = libcon == lc))
+})
 colnames(res2) <- 1:7
 ```
 

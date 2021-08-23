@@ -34,40 +34,51 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  fig.retina = FALSE,
+  message = FALSE,
+  comment = NA
+)
 ```
 
 
 ```{r initialize,echo=FALSE}
-##First, just setup the R environment for today:
-if(!file.exists('figs')) dir.create('figs')
+## First, just setup the R environment for today:
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 With the election coming up, you receive a new request for adjudication of a
@@ -86,18 +97,24 @@ conducted in Benin (see the materials in
 
 ```{r datasetup, cache=TRUE}
 library(readstata13)
-surveydat<-read.dta13("http://www.jakebowers.org/Data/FujiwaraWantchekon2013/20110167_data/survey_data_AEJ.dta",convert.factors=FALSE)
-electdat<-read.dta13("http://www.jakebowers.org/Data/FujiwaraWantchekon2013/20110167_data/AEJ_elec_data.dta",convert.factors=FALSE)
+surveydat <- read.dta13("http://www.jakebowers.org/Data/FujiwaraWantchekon2013/20110167_data/survey_data_AEJ.dta", convert.factors = FALSE)
+electdat <- read.dta13("http://www.jakebowers.org/Data/FujiwaraWantchekon2013/20110167_data/AEJ_elec_data.dta", convert.factors = FALSE)
 ```
 
 You show how the proportion of people who say that they receive cash from the campaign was reduced in the treated villages:
 
 ```{r}
 ## Check the design: table(surveydat$depcom,surveydat$treat)
-surveydat %>% group_by(treat) %>% summarize(cash=mean(cash))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(cash = mean(cash))
 ## or with(surveydat, tapply(cash,treat,mean))
-surveydat %>% group_by(treat) %>% summarize(index=mean(index))
-electdat %>% group_by(treat) %>% summarize(mean(participation))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(index = mean(index))
+electdat %>%
+  group_by(treat) %>%
+  summarize(mean(participation))
 ```
 
 Just as you show the same thing about voter participation using the
@@ -123,23 +140,33 @@ effect of different styles of campaigning?
 
 ```{r}
 library(dplyr)
-surveydat %>% group_by(treat) %>% summarize(age=mean(age))
-surveydat %>% group_by(treat) %>% summarize(primary_schooling=mean(primary_schooling))
-surveydat %>% group_by(treat) %>% summarize(secondary_schooling_or_more=mean(secondary_schooling_or_more))
-surveydat %>% group_by(treat) %>% summarize(reg_income=mean(reg_income))
-surveydat %>% group_by(treat) %>% summarize(member=mean(member))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(age = mean(age))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(primary_schooling = mean(primary_schooling))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(secondary_schooling_or_more = mean(secondary_schooling_or_more))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(reg_income = mean(reg_income))
+surveydat %>%
+  group_by(treat) %>%
+  summarize(member = mean(member))
 ```
 ```{r}
 
-blah <- lapply(1:10000,function(i){
-		       dat<-surveydat %>% group_by(sample(treat)) %>% summarize(age=mean(age)) 
-			 diff(dat$age)
-			 })
+blah <- lapply(1:10000, function(i) {
+  dat <- surveydat %>%
+    group_by(sample(treat)) %>%
+    summarize(age = mean(age))
+  diff(dat$age)
+})
 
-res <- do.call("rbind",blah)
+res <- do.call("rbind", blah)
 summary(res)
-
-
 ```
 # References
 

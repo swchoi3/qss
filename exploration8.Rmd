@@ -36,36 +36,47 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  fig.retina = FALSE,
+  message = FALSE,
+  comment = NA
+)
 
-if(!file.exists('figs')) dir.create('figs')
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 "Hey! I know that you have been working so hard  to help me, but the work is
@@ -95,32 +106,31 @@ people who live alone (you can be proud of my growing R skills):"
 ```{r}
 library(foreign)
 library(dplyr)
-nhIndiv<-read.dta("http://jakebowers.org/Data/NHrep_individual.dta")
-vote98dat<-filter(nhIndiv,persons==1)
+nhIndiv <- read.dta("http://jakebowers.org/Data/NHrep_individual.dta")
+vote98dat <- filter(nhIndiv, persons == 1)
 ```
 
 "Someone said I can get the Intent to Treat Effect like so:"
 
 ```{r}
-lm1<-lm(v98~persngrp,data=vote98dat)
-itt<-coef(lm1)["persngrp"]
+lm1 <- lm(v98 ~ persngrp, data = vote98dat)
+itt <- coef(lm1)["persngrp"]
 
-compliance<-mean(vote98dat$cntany)
-itt/compliance
+compliance <- mean(vote98dat$cntany)
+itt / compliance
 
-stage1<-lm(cntany~persngrp,data=vote98dat)
+stage1 <- lm(cntany ~ persngrp, data = vote98dat)
 coef(stage1)[2]
 predstage1 <- predict(stage1)
-stage2<-lm(v98~predstage1,data=vote98dat)
+stage2 <- lm(v98 ~ predstage1, data = vote98dat)
 coef(stage2)
 
 library(sem)
-twostage<-tsls(v98~cntany,instruments=~persngrp,data=vote98dat)
+twostage <- tsls(v98 ~ cntany, instruments = ~persngrp, data = vote98dat)
 coef(twostage)
 
-itt <- cov(vote98dat[,c("v98","persngrp")])[1,2]
-denom <- cov(vote98dat[,c("cntany","persngrp")])[1,2]
-
+itt <- cov(vote98dat[, c("v98", "persngrp")])[1, 2]
+denom <- cov(vote98dat[, c("cntany", "persngrp")])[1, 2]
 ```
 
 "But I want to know the effect of talking with a canvasser. I gather that I can

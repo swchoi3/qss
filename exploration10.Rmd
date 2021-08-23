@@ -32,39 +32,50 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  message = FALSE,
+  comment = NA
+)
 ```
 
 
 ```{r initialize,echo=FALSE}
-##First, just setup the R environment for today:
-if(!file.exists('figs')) dir.create('figs')
+## First, just setup the R environment for today:
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 The campaign consultant calls back. First, she is worried about the following
@@ -80,63 +91,65 @@ of the two $p$-values that you produce below?"
 
 
 ```{r}
-news.df<-read.csv("http://jakebowers.org/Data/news.df.csv")
-news.df$sF<-factor(news.df$s)
+news.df <- read.csv("http://jakebowers.org/Data/news.df.csv")
+news.df$sF <- factor(news.df$s)
 ```
 
 
 ```{r chunk1, eval=FALSE}
 library(randomizr) ## for the block_ra function
 
-meandiffTZ<-function(Y,Z,S){
-	## Y: outcome
-	## Z: binary treatment
-	## S: Stratum or pair
-	Ymd <- Y - ave(Y,S)
-	## result <- mean(Ymd[Z==1]) - mean(Ymd[Z==0])
-	##result <- coef(lm(Ymd ~ Z,data=news.df))[["Z"]]
-        ## result <- coef(lmrob(Ymd ~ Z,data=news.df, control=robctrl))[["Z"]] 
-	return(result)
+meandiffTZ <- function(Y, Z, S) {
+  ## Y: outcome
+  ## Z: binary treatment
+  ## S: Stratum or pair
+  Ymd <- Y - ave(Y, S)
+  ## result <- mean(Ymd[Z==1]) - mean(Ymd[Z==0])
+  ## result <- coef(lm(Ymd ~ Z,data=news.df))[["Z"]]
+  ## result <- coef(lmrob(Ymd ~ Z,data=news.df, control=robctrl))[["Z"]]
+  return(result)
 }
 
 library(robust)
-robctrl <- lmrob.control(setting = "KS2014", maxit.scale=1000, k.max=1000, k.m_s=100,
-	  numpoints=8, max.it = 1000, solve.tol=1e-06,
-	  rel.tol=1e-06, refine.tol=1e-06) ## Recommended for smaller samples
+robctrl <- lmrob.control(
+  setting = "KS2014", maxit.scale = 1000, k.max = 1000, k.m_s = 100,
+  numpoints = 8, max.it = 1000, solve.tol = 1e-06,
+  rel.tol = 1e-06, refine.tol = 1e-06
+) ## Recommended for smaller samples
 
 
 
-newExp<-function(S){
-	##S: pair or blocking factor, assumes 2 treatments with equal probability
-	block_ra(S)
+newExp <- function(S) {
+  ## S: pair or blocking factor, assumes 2 treatments with equal probability
+  block_ra(S)
 }
 
-##pair.assignment<-function(pair,z){
+## pair.assignment<-function(pair,z){
 ##  ## A function to randomly assign treatment within pair
 ##  unsplit(lapply(split(z,pair),sample),pair)
-##}
+## }
 
 nsims <- 4800 ## 16*300
 set.seed(20161101)
-nullDist <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=newExp(news.df$sF),S=news.df$sF))
-nullDistBad <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=sample(news.df$z),S=rep(1,8)))
+nullDist <- replicate(nsims, meandiffTZ(Y = news.df$r, Z = newExp(news.df$sF), S = news.df$sF))
+nullDistBad <- replicate(nsims, meandiffTZ(Y = news.df$r, Z = sample(news.df$z), S = rep(1, 8)))
 ## M-estimator
-nullDistM <- replicate(nsims, meandiffTZ(Y=news.df$r,Z=newExp(news.df$z),S=news.df$sF))
+nullDistM <- replicate(nsims, meandiffTZ(Y = news.df$r, Z = newExp(news.df$z), S = news.df$sF))
 
-obsTZ <- meandiffTZ(Y=news.df$r,Z=news.df$z,S=news.df$sF)
-obsTZM <- meandiffTZ(Y=news.df$r,Z=news.df$z,S=news.df$sF)
+obsTZ <- meandiffTZ(Y = news.df$r, Z = news.df$z, S = news.df$sF)
+obsTZM <- meandiffTZ(Y = news.df$r, Z = news.df$z, S = news.df$sF)
 
 ## What would Fisher say?
-prod(rep(choose(2,1),4))
-1/prod(rep(choose(2,1),4)) ## we should see each result with this prob or a multiple of it
+prod(rep(choose(2, 1), 4))
+1 / prod(rep(choose(2, 1), 4)) ## we should see each result with this prob or a multiple of it
 
 ## Our computational approach?
 length(unique(nullDist))
 table(nullDist)
-table(nullDist)/nsims
+table(nullDist) / nsims
 print(obsTZ)
 
-sum(nullDist >= obsTZ)/nsims
+sum(nullDist >= obsTZ) / nsims
 ## same as mean(nullDist >= obsTZ)
 ```
 

@@ -2,77 +2,41 @@
 title: 'Exploration 1: Description in One Dimension'
 author: 'Jake Bowers'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
-bibliography: classbib.bib
+header-includes:
+    - \usepackage[T1]{fontenc}
+    - \usepackage{textcomp}
+    - \usepackage{fontspec}
+    - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+    - \newfontfamily\themainfont[Ligatures=TeX]{Crimson Text}
+    - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+    - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+    fig_height: 8
+    fig_width: 8
+    latex_engine: xelatex
+    citation_package: biblatex
+    keep_tex: true
 fontsize: 10pt
 geometry: margin=1in
-mainfont: "Minion Pro"
 graphics: yes
-output:
-  html_document:
-    fig_caption: yes
-    fig_height: 4
-    fig_width: 4
-  pdf_document:
-    latex_engine: xelatex
-    graphics: yes
-    fig_caption: yes
-    fig_height: 4
-    fig_width: 4
+mainfont: "Helvetica"
+bibliography: classbib.bib
+biblio-style: "authoryear-comp,natbib"
 ---
 
 <!-- Make this document using library(rmarkdown); render("exploration1.Rmd") -->
 \input{mytexsymbols}
 
-
-
-```{r include=FALSE, cache=FALSE}
-# Some customization.  You can alter or delete as desired (if you know what you are doing).
-# knitr settings to control how R chunks work.
-
-## To make the html file do
-## render("exploration1.Rmd",output_format=html_document(fig_retina=FALSE))
-## To make the pdf file do
-## render("exploration1.Rmd",output_format=pdf_document())
-
-require(knitr)
-opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
+library(here)
+source(here("rmd_setup.R"))
+library(tidyverse)
 ```
 
-
-```{r initialize,echo=FALSE}
-##First, just setup the R environment for today:
-if(!file.exists('figs')) dir.create('figs')
-
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
-```
-
-"Brexit! UKIP! ISIL!" When your old friend calls, she seems to be yelling. Once
+"Brexit! UKIP! ISIL! Taliban! COVID!" When your old friend calls, she seems to be yelling. Once
 she calms down, she explains: "I am in charge of Improving Civic Society
 programs for the United Nations, and have been asked to step in to help out at
 the UK Office of Social Capital." After you congratulate her on what appears to
@@ -85,91 +49,98 @@ their computers smashed, but their coffee cups still warm and untouched." You
 ask her about her own safety and she responds. "This is all within operational
 parameters. No worries. My problem is that I need to report to the high command
 and I don't know what the right answer is. Now I don't even have numbers. Please help. Can we hop on a
-Hangout?"
+Zoom call?"
 
-She does not enable video in the Hangout. However, she begins sending you some
+She does not enable video in the Zoom call. However, she begins sending you some
 code. "Here is what I have in terms of output. Can you explain to me what is
-going on?"
+going on with each line of code? I mean shouldn't the total number of hours people spend helping each
+other be something other than `NA`? How do you figure out what is going on when
+you make errors or find something confusing in `R`?"
 
 
 ```{r}
 load(url("http://jakebowers.org/Data/ho05.rda"))
-table(ho05$postbomb,useNA="ifany")
-library(dplyr)
-wrkdat <- ho05  %>% filter(postbomb==0)
+table(ho05$postbomb, useNA = "ifany")
+wrkdat <- ho05 %>% filter(postbomb == 0)
 sum(wrkdat$hlphrs)
 ```
 
-She continues, "And then I have this from a previous meeting where they talked about `codebooks` but I don't think these were the ordinary kind of encrypted communication behind enemy lines."
+She continues, "And then I have this from a previous meeting where they talked
+about `codebooks` but I don't think these were the ordinary kind of encrypted
+communication behind enemy lines."
 
-\begin{small}
-\begin{verbatim}
-  ### CODEBOOK
-  postbomb: 1=interviewed after the bombing, 0=interviewed before the bombing
+```
+### CODEBOOK
+postbomb: 1=interviewed after the bombing, 0=interviewed before the bombing
 
-  grphrs: 6.1.1 Which of the following groups, clubs or organisations
-    have you been involved with during the last 12 months? That's anything
-    you've taken part in, supported, or that you've helped in any way, either
-    on your own or with others. Please exclude giving money and anything that
-    was a requirement of your job.
+grphrs: 6.1.1 Which of the following groups, clubs or organisations
+  have you been involved with during the last 12 months? That's anything
+  you've taken part in, supported, or that you've helped in any way, either
+  on your own or with others. Please exclude giving money and anything that
+  was a requirement of your job.
 
-    6.1.2 In the last 12 months have you given unpaid help to any groups, clubs or
-    organisations in any of the following ways?
+  6.1.2 In the last 12 months have you given unpaid help to any groups, clubs or
+  organisations in any of the following ways?
 
-    6.1.5 Approximately how many hours have you spent helping this/these group(s),
-    club(s) or organisation(s) in the past 4 weeks?
+  6.1.5 Approximately how many hours have you spent helping this/these group(s),
+  club(s) or organisation(s) in the past 4 weeks?
 
-  infhrs: In the last 12 months have you done any of the following things,
-    unpaid, for someone who was not a relative?
+infhrs: In the last 12 months have you done any of the following things,
+  unpaid, for someone who was not a relative?
 
-    This is any unpaid help you, as an individual, may have given to other people,
-    that is apart from any help given through a group, club or organisation. This
-    could be help for a friend, neighbour or someone else but not a relative.
+  This is any unpaid help you, as an individual, may have given to other people,
+  that is apart from any help given through a group, club or organisation. This
+  could be help for a friend, neighbour or someone else but not a relative.
 
-    6.4.4 Now just thinking about the past 4 weeks. Approximately how many hours
-    have you spent doing this kind of thing/these kind of things in the past 4
-    weeks?
+  6.4.4 Now just thinking about the past 4 weeks. Approximately how many hours
+  have you spent doing this kind of thing/these kind of things in the past 4
+  weeks?
 
-  hlphrs: grphrs+infhrs
-\end{verbatim}
-\end{small}
+hlphrs: grphrs+infhrs
+```
 
-She asks, "What is the best way to say how civic life was going before the bombings? What is the right answer?"
+She asks, "What is the best way describe how civic life was going before the
+bombings in 2005 (let alone before all of the other disruptions occurred in the
+UK)? What is the right answer?"
 
 Later, after you had worked on this a bit she calls back, "Hey. Thanks so much
 for helping! I just found this code and thought it might be useful. What do you
 think? Can you tell me what this means? Does it help me get the right answer
 about how much time people in the UK were devoting to helping each other and/or
 supporting groups? Why are there so many ways to descibe a single variable
-anyway? What is the point?  Also, are there any plots that would help me tell
-the right story about this variable?"
+anyway? What is the point? Which approaches do you prefer (from those below and
+others)? Also, are there any plots that would help me tell the right story about
+this variable? What might they be? What do they look like?"
 
-```{r, results='hide'}
-mean(wrkdat$hlphrs,trim=.1,na.rm=TRUE)
-hlp <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
+```{r deltaforce1robustdescription, results='hide'}
+mean(wrkdat$hlphrs, trim = .1, na.rm = TRUE)
+hlp_vec <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
 library(psych)
-winsor.mean(hlp)
+winsor.mean(hlp_vec)
 library(robustHD)
-mean(winsorize(hlp))
+mean(winsorize(hlp_vec))
 
-onestepMest <- function(x){
-	## Following http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
-	madn <- mad(x, constant = 1.4826) ## 1/1.4826 = .6745
-	M <-  ( abs(x - median(x)) / madn )  > 1.28
-	U <- sum( x > M)
-	L <- sum( x < M)
-	B <- length(x) - U - L
-	n <- length(x)
-	mux <- (1.28 * madn * (U-L) + B) /(n - L - U)
-	return(mux)
+onestepMest <- function(x) {
+  ## Following Section 2.1 in http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
+  madn <- mad(x, constant = 1.4826) ## 1/1.4826 = .6745
+  M <- (abs(x - median(x)) / madn) > 1.28
+  U <- sum(x > M)
+  L <- sum(x < M)
+  B <- length(x) - U - L
+  n <- length(x)
+  mux <- (1.28 * madn * (U - L) + B) / (n - L - U)
+  return(mux)
 }
 
-onestepMest(hlp)
+onestepMest(hlp_vec)
 library(robustbase)
-huberM(hlp)
-fivenum(hlp)
-quantile(hlp,seq(0,1,.1))
-
+huberM_results <- huberM(hlp_vec)
+print(huberM_results$mu)
+print(huberM_results$s)
+fivenum(hlp_vec)
+quantile(hlp_vec, seq(0, 1, .1))
+sd(hlp_vec)
+mad(hlp_vec)
 ```
 
 <!-- see also https://dornsife.usc.edu/labs/rwilcox/software/ and WRS:::mest  https://dornsife.usc.edu/assets/sites/239/docs/WRS2.pdf and the MASS library--->

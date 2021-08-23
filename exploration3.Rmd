@@ -34,40 +34,51 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  fig.retina = FALSE,
+  message = FALSE,
+  comment = NA
+)
 ```
 
 
 ```{r initialize,echo=FALSE}
-##First, just setup the R environment for today:
-if(!file.exists('figs')) dir.create('figs')
+## First, just setup the R environment for today:
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 "Ok, so you helped us solve an important problem in our UK office. However, my staff is now having another debate. This time they are saying that the relationship between age and support for Trump is non-linear. Right now some are yelling 'Is not!' and others are yelling 'Is too!'. Now, I don't understand why anyone would care about a non-linear relationship. Isn't a linear relationship good enough? What does non-linearity gain us? Can you explain to me in substantive terms what a non-linear relationship might teach us versus a linear one? (I also think that this question and the conflict here at my staff table cannot be this simple.)"
@@ -75,9 +86,9 @@ options(error=function(){options(prompt="> ",continue="+ ");NULL})
 "I found some data that might bear on this question."
 
 ```{r}
-download.file("http://jakebowers.org/Data/ANES/anes_pilot_2016_csv.zip",destfile="anespilot2016.csv.zip")
+download.file("http://jakebowers.org/Data/ANES/anes_pilot_2016_csv.zip", destfile = "anespilot2016.csv.zip")
 unzip("anespilot2016.csv.zip")
-anespi16<-read.csv("anes_pilot_2016.csv",as.is=TRUE,strip.white=TRUE)
+anespi16 <- read.csv("anes_pilot_2016.csv", as.is = TRUE, strip.white = TRUE)
 ```
 
 "Oh. Also, before I run, I can tell you that the two sides are now yelling about 'global' versus 'local' smoothers. And I don't even hear them talking about the kinds of questions you've talked with me about in regards overly influential points and methods for handling them. I know that if I don't go back with at least one global but non-linear smoothed solution, one global linear smoothed solution, and two local non-linear smoothed solution, I'm going to look silly and they will ignore me, even though I'm the leader of this team! I need to act with authority, so I need to be able to say why I made the choices I made and why I avoided other choices. I will need to explain the strengths and weakness of my choices, but to defend one choice above others in order to act decisively in this cyber-theater. Help!"

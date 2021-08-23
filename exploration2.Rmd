@@ -23,53 +23,11 @@ output:
 \input{mytexsymbols}
 
 
-```{r include=FALSE, cache=FALSE}
-# Some customization.  You can alter or delete as desired (if you know what you are doing).
-# knitr settings to control how R chunks work.
-
-## To make the html file do
-## render("exploration1.Rmd",output_format=html_document(fig_retina=FALSE))
-## To make the pdf file do
-## render("exploration1.Rmd",output_format=pdf_document())
-
-require(knitr)
-opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
+library(here)
+source(here("rmd_setup.R"))
+library(tidyverse)
 ```
-
-
-```{r initialize,echo=FALSE}
-##First, just setup the R environment for today:
-if(!file.exists('figs')) dir.create('figs')
-
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
-```
-
 
 "Thanks!" Your friend's voice sounds much calmer than it did when you last
 spoke. "My tasks this week are much less scary than engaging with long-tailed
@@ -89,23 +47,23 @@ about data. Can you help? Here are the two statements."
 ```{r readdata}
 # library(foreign) ## For older Stata files
 library(readstata13)
-bes<-read.dta13("http://jakebowers.org/Data/BES2015/bes_f2f_original_v3.0.dta",convert.factors=FALSE)
+bes <- read.dta13("http://jakebowers.org/Data/BES2015/bes_f2f_original_v3.0.dta", convert.factors = FALSE)
 ```
 
 "And I found a (codebook)[http://jakebowers.org/Data] too. And have learned enough about R to investigate some variables."
 
 ```{r sometabs, results="hide"}
-table(bes$r03,useNA="ifany") ##  Feminism
-table(bes$Age,useNA="ifany")
-table(bes$y01,useNA="ifany") ## Income
-table(bes$j05,useNA="ifany") ## Immigration
-table(bes$education,useNA="ifany")
-table(bes$b02,useNA="ifany")
-table(bes$b04,useNA="ifany")
+table(bes$r03, useNA = "ifany") ##  Feminism
+table(bes$Age, useNA = "ifany")
+table(bes$y01, useNA = "ifany") ## Income
+table(bes$j05, useNA = "ifany") ## Immigration
+table(bes$education, useNA = "ifany")
+table(bes$b02, useNA = "ifany")
+table(bes$b04, useNA = "ifany")
 ## 1 if voted or would have voted for ukip
-bes$ukipvoter <- as.numeric(ifelse(is.na(bes$b02),bes$b04==8,bes$b02==7))
-table(bes$ukipvoter,useNA="ifany")
-table(bes$d01,useNA="ifany") # Party ID
+bes$ukipvoter <- as.numeric(ifelse(is.na(bes$b02), bes$b04 == 8, bes$b02 == 7))
+table(bes$ukipvoter, useNA = "ifany")
+table(bes$d01, useNA = "ifany") # Party ID
 ```
 
 "What do you think? Between these variables, and the others in the codebook,
@@ -120,50 +78,47 @@ something else?  Right now, we just want to describe relationships so
 $p$-values or confidence intervals would not be helpful."
 
 ```{r}
-lm1<-lm(ukipvoter~r03,data=bes,subset=r03!=-1 & j05!=-1)
-predlm1 <- predict(lm1,newdata=data.frame(r03=c(1,5)))
+lm1 <- lm(ukipvoter ~ r03, data = bes, subset = r03 != -1 & j05 != -1)
+predlm1 <- predict(lm1, newdata = data.frame(r03 = c(1, 5)))
 predlm1[1] - predlm1[2]
 
-bes$proweq<-(bes$r03-1)/4
-bes$proweq[bes$proweq<0] <- NA
-table(bes$proweq,bes$r03,useNA="ifany")
+bes$proweq <- (bes$r03 - 1) / 4
+bes$proweq[bes$proweq < 0] <- NA
+table(bes$proweq, bes$r03, useNA = "ifany")
 
-lm1a <- lm(ukipvoter ~ proweq , data=bes, subset=j05!=-1)
+lm1a <- lm(ukipvoter ~ proweq, data = bes, subset = j05 != -1)
 
 bes$proimmig <- bes$j05 - 1
-with(bes,table(proimmig,j05))
-lm2<-lm(ukipvoter~proimmig,data=bes,subset=r03!=-1 & j05!=-1)
-predlm2<-predict(lm2,newdata=data.frame(proimmig=c(0,1)))
+with(bes, table(proimmig, j05))
+lm2 <- lm(ukipvoter ~ proimmig, data = bes, subset = r03 != -1 & j05 != -1)
+predlm2 <- predict(lm2, newdata = data.frame(proimmig = c(0, 1)))
 predlm2[1] - predlm2[2]
 
-lm1b <- lm(ukipvoter ~ proweq + I(proweq^2), data=bes, subset=j05!=-1)
+lm1b <- lm(ukipvoter ~ proweq + I(proweq^2), data = bes, subset = j05 != -1)
 
 line1 <- .1 - .3 * bes$proweq
 diffs1 <- bes$proweq - line1
-sum(diffs1^2,na.rm=TRUE)
+sum(diffs1^2, na.rm = TRUE)
 
 diffslm1a <- residuals(lm1a)
 sum(diffslm1a^2)
 
-myssr<-function(a,b){
+myssr <- function(a, b) {
   line1 <- a + b * bes$proweq
-diffs1 <- bes$proweq - line1
-sum(diffs1^2,na.rm=TRUE)
+  diffs1 <- bes$proweq - line1
+  sum(diffs1^2, na.rm = TRUE)
 }
 
-as <- runif(100,-1,1) ##.145 + seq(-.1,.1,length=100)
-bs <- -.06 + seq(-.1,.1,length=100)
-inputs <- expand.grid(as,bs)
+as <- runif(100, -1, 1) ## .145 + seq(-.1,.1,length=100)
+bs <- -.06 + seq(-.1, .1, length = 100)
+inputs <- expand.grid(as, bs)
 
-res<-matrix(nrow=100*100,ncol=3)
-for(i in 1:nrow(res)){
-  res[i,1]<-myssr(inputs[i,1],inputs[i,2])
-  res[i,2]<-inputs[i,1]
-  res[i,3]<-inputs[i,2]
+res <- matrix(nrow = 100 * 100, ncol = 3)
+for (i in 1:nrow(res)) {
+  res[i, 1] <- myssr(inputs[i, 1], inputs[i, 2])
+  res[i, 2] <- inputs[i, 1]
+  res[i, 3] <- inputs[i, 2]
 }
-
-
-
 ```
 
 

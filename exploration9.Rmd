@@ -36,36 +36,47 @@ output:
 
 require(knitr)
 opts_chunk$set(
-  tidy=FALSE,     # display code as typed
-  size="small",    # slightly smaller font for code
-  echo=TRUE,
-  results='markup',
-  strip.white=TRUE,
-  fig.path='figs/fig',
-  cache=FALSE,
-  highlight=TRUE,
-  width.cutoff=132,
-  size='footnotesize',
-  out.width='.9\\textwidth',
-  fig.retina=FALSE,
-  message=FALSE,
-  comment=NA)
+  tidy = FALSE, # display code as typed
+  size = "small", # slightly smaller font for code
+  echo = TRUE,
+  results = "markup",
+  strip.white = TRUE,
+  fig.path = "figs/fig",
+  cache = FALSE,
+  highlight = TRUE,
+  width.cutoff = 132,
+  size = "footnotesize",
+  out.width = ".9\\textwidth",
+  fig.retina = FALSE,
+  message = FALSE,
+  comment = NA
+)
 
-if(!file.exists('figs')) dir.create('figs')
+if (!file.exists("figs")) dir.create("figs")
 
-options(SweaveHooks=list(fig=function(){
-			   par(mar=c(3.5, 3, 1.1, 0),
-			       pty="s",
-			       mgp=c(1.5,0.5,0),
-			       oma=c(0,0,0,0))},
-			 echo=function(){options(continue=" ") ##Don't show "+" prompts,
-			 options(prompt=" ")
-			 }),
-	digits=4,
-	scipen=8,
-	width=132
-	)
-options(error=function(){options(prompt="> ",continue="+ ");NULL})
+options(
+  SweaveHooks = list(
+    fig = function() {
+      par(
+        mar = c(3.5, 3, 1.1, 0),
+        pty = "s",
+        mgp = c(1.5, 0.5, 0),
+        oma = c(0, 0, 0, 0)
+      )
+    },
+    echo = function() {
+      options(continue = " ") ## Don't show "+" prompts,
+      options(prompt = " ")
+    }
+  ),
+  digits = 4,
+  scipen = 8,
+  width = 132
+)
+options(error = function() {
+  options(prompt = "> ", continue = "+ ")
+  NULL
+})
 ```
 
 
@@ -105,33 +116,32 @@ two files together.
 
 ```{r, cache=TRUE}
 library(readstata13)
-dat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/data-population-example.dta", convert.factors=FALSE)
-attr(dat,"var.labels")
-
+dat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/data-population-example.dta", convert.factors = FALSE)
+attr(dat, "var.labels")
 ```
 
 ```{r, cache=TRUE}
-brollodat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/AER_smallsample.dta",convert.factors=FALSE)
-stopifnot(all.equal(dat$x,brollodat$pop))
+brollodat <- read.dta13("http://jakebowers.org/Data/CattaneoEtAl2016/AER_smallsample.dta", convert.factors = FALSE)
+stopifnot(all.equal(dat$x, brollodat$pop))
 length(unique(dat$x))
 length(unique(brollodat$pop))
 ## Restrict attention to only municipalities with unique population numbers so that we can use the covariates from the Brollo et al paper.
 
-uniqdat <- dat[!duplicated(dat$x),]
-uniqbrollodat <- brollodat[!duplicated(brollodat$pop),]
-stopifnot(all.equal(uniqdat$x,uniqbrollodat$pop))
+uniqdat <- dat[!duplicated(dat$x), ]
+uniqbrollodat <- brollodat[!duplicated(brollodat$pop), ]
+stopifnot(all.equal(uniqdat$x, uniqbrollodat$pop))
 
 ## Merge the covariates from the Brollo et al paper onto the original dataset
 ## bigdat <- merge(uniqdat,uniqbrollodat,by.x="x",by.y="pop",all=TRUE)
 library(dplyr)
 ## dplyr functions are often faster than base R functions
 uniqdat$pop <- uniqdat$x ## to allow both data frames to have same key name
-stopifnot(intersect(names(uniqdat),names(uniqbrollodat))=="pop")
-bigdat <- inner_join(uniqdat,uniqbrollodat,by="pop")
-stopifnot(nrow(bigdat)==nrow(uniqdat))
-stopifnot(nrow(bigdat)==nrow(uniqbrollodat))
-stopifnot(all.equal(bigdat$pop,bigdat$x))
-save(bigdat,file="bigdat.rda")
+stopifnot(intersect(names(uniqdat), names(uniqbrollodat)) == "pop")
+bigdat <- inner_join(uniqdat, uniqbrollodat, by = "pop")
+stopifnot(nrow(bigdat) == nrow(uniqdat))
+stopifnot(nrow(bigdat) == nrow(uniqbrollodat))
+stopifnot(all.equal(bigdat$pop, bigdat$x))
+save(bigdat, file = "bigdat.rda")
 ```
 
 
@@ -145,13 +155,13 @@ save(bigdat,file="bigdat.rda")
 > confusing!
 
 ```{r}
-rm(list=ls()) ## removes all existing objects in the working memory
+rm(list = ls()) ## removes all existing objects in the working memory
 load("bigdat.rda")
 ## Treatment indicator for first discontinuiity of 10189
 ## Other discontinuities: 13585, 16981, 23773, 30565, 37356, 44148
-bigdat$z10189 <- as.numeric(bigdat$x>=10189)
-mean(bigdat$y[bigdat$z10189==1 & bigdat$cutoff_10189==1]) - mean(bigdat$y[bigdat$z10189==0 & bigdat$cutoff_10189==1])
-lm(y~z10189,data=bigdat,subset=cutoff_10189==1)
+bigdat$z10189 <- as.numeric(bigdat$x >= 10189)
+mean(bigdat$y[bigdat$z10189 == 1 & bigdat$cutoff_10189 == 1]) - mean(bigdat$y[bigdat$z10189 == 0 & bigdat$cutoff_10189 == 1])
+lm(y ~ z10189, data = bigdat, subset = cutoff_10189 == 1)
 ```
 
 
