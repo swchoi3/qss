@@ -427,6 +427,7 @@ quantile(hlp_vec, seq(0, 1, .1))
 sd(hlp_vec) 
 mad(hlp_vec)
 ```
+Ekin: If you compare the results of the last two codes of sd(hlp_vect) and mad(hlp_vect), you can see the effect of the outliers, although trimmed in the beginning by .1. While the standard deviation of hlp_vect is 14.87887, the MAD of the same vector is 1.4826.
 
 <!-- see also https://dornsife.usc.edu/labs/rwilcox/software/ and WRS:::mest  https://dornsife.usc.edu/assets/sites/239/docs/WRS2.pdf and the MASS library--->
 
