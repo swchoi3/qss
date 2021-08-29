@@ -96,7 +96,7 @@ mean(london$hlphrs, na.rm=T) ##Voila!
 
 ##See? people helped each other for 5287 hours, for an average of 5 hrs per person (though as we'll see, this is far from accurate!) :)
 
-Extra Notes on the codes:
+Jaeyoung: Extra Notes on the codes
 #While making a table, include counts of NA only if the count is positive. FYI, useNA = "no" means never include NA, useNA = "always" means you include the NA even for zero counts.
 #wrkdat <- ho05 %>% filter(postbomb == 0)
 #So, if you see the codebook, you may notice that the postbomb variable is a binary variable composed of 1 and 0. So basically, what you are doing here is making a subset of data named wrkdat, and the wrkdat only includes the cases with a postbomb value is 0, which means you only want to see the cases with interviewed before the bombing.
@@ -109,7 +109,9 @@ Extra Notes on the codes:
 
 ## I mean shouldn't the total number of hours people spend helping each other be something other than `NA`? 
 
-**JEK Answer**: One of the first and most fundamental aspects of learning how to use R and introductory statistics in general is how to treat NAs. Although it may seem simple from a data-cleaning point of view to simply drop those values, there are arguably cases where inferences can be made as a result of NA responses (think survey responses where the respondent refuses to answer a particular question; their refusal in and of itself can be enlightening when we factor in other variables). I would go so far as to argue that that should be one of the very first task we should do when working with data by making a plan to deal with NAs grounded in research design and sound statistical theory (for example, I'd daresay most stat professors and academics' heads would blow off if we just discarded a whole bunch of data "just because they don't fit"; it would be a rare case of academics being shocked into silence, maybe). You'd want to discern between three general categories of missing data: Missing Completely at Random (MCAR), Missing at Random (MAR), and Missing Not at Random (MNAR). 
+Jaeyoung: First, I want to ask you how you want to measure civic life. Based on the codebook, you can only measure civic life with whether people involved in a group, clubs and organisations or not, and whether people have done some volunteer work or not. If these two variables are enough for you to infer civic life, I mean conceptualize it, I would recommend you to make two subset of data from ho05 into interviewed before the bombing and after the bombing. And then, get the aggregated number of how long does people helped each other and "compare" them. So, you might want to try as below.
+
+Kevin: One of the first and most fundamental aspects of learning how to use R and introductory statistics in general is how to treat NAs. Although it may seem simple from a data-cleaning point of view to simply drop those values, there are arguably cases where inferences can be made as a result of NA responses (think survey responses where the respondent refuses to answer a particular question; their refusal in and of itself can be enlightening when we factor in other variables). I would go so far as to argue that that should be one of the very first task we should do when working with data by making a plan to deal with NAs grounded in research design and sound statistical theory (for example, I'd daresay most stat professors and academics' heads would blow off if we just discarded a whole bunch of data "just because they don't fit"; it would be a rare case of academics being shocked into silence, maybe). You'd want to discern between three general categories of missing data: Missing Completely at Random (MCAR), Missing at Random (MAR), and Missing Not at Random (MNAR). 
 
 In this case here, we can discard the NAs because 1) they make such a small part of the dataset (only 3), and 2) because unless they are huge numbers, excluding or including them wouldn't change much from a location standpoint. Here, let's practice.
 
@@ -119,12 +121,13 @@ library(naniar)
 mcar_test(london) ## we can see that there are 8 missing data patterns. The chi-square statistic for Little's Test (which is something I'd love to hear more about in class as well as what exactly a chi-squre is used for & when it's applied) is quite high, meaning less auto-correlation.
 ```
 
-##Group notes on types of missing data
+##Kevin: notes on types of missing data
 When the rows containing missing data cannot be distinguished from the ones that do not contain any NA values, the missing values are classified as Missing Completely at Random or simply MCAR. (There are statistical tools and techniques to find if our data is MCAR, one of which is the Little's test.) Missing at Random means that there is a relationship between the variable being missing but not the values themselves. (MAR data can be imputed using Multiple Imputation techniques or Maximum Likelihood estimations.) MAR data cannot be ignored as in the case of MCAR. This is because, MAR data can induce parameter bias due to conditional missing of data. If the dataset is large we can even chose to ignore the MAR rows. If the characteristics of the data do not fall in either of MCAR and MAR it is classified as MNAR. For example, if the "Income" values are missing for people who have a low salary. It is a classic example of MNAR data. MNAR data is problematic as it biases the estimates. 
+
 
 ## How do you figure out what is going on when you make errors or find something confusing in `R`?" 
 
-First thing to do is always check the error message. I (K) probably lost enough hours to fill an NFL season's worth of advertisements scanning through my code searching for missing "("s or something similar. If it's not a syntax error, check the error message to make sure you're doing what you are actually intending to do: like all computer programs, R is at its core a logic machine. Look here at an earlier example.
+Kevin: First thing to do is always check the error message. I probably lost enough hours to fill an NFL season's worth of advertisements scanning through my code searching for missing "("s or something similar. If it's not a syntax error, check the error message to make sure you're doing what you are actually intending to do: like all computer programs, R is at its core a logic machine. Look here at an earlier example.
 
 ```{r littles test2, echo=F}
 install.packages("naniar")
@@ -149,7 +152,7 @@ By reforming the data into a way the function can run, we've solved that pesky e
 ## She asks, "What is the best way to describe how civic life was going before the bombings in 2005 (let alone before all of the other disruptions occurred in the UK)? What is the right answer?"
 
 
-First, we want to ask you how you want to measure civic life. Based on the codebook, you can only measure civic life with whether people involved in a group, clubs and organisations or not, and whether people have done some volunteer work or not. If these two variables are enough for you to infer civic life, I mean conceptualize it, I would recommend you to make two subset of data from ho05 into interviewed before the bombing and after the bombing. And then, get the aggregated number of how long does people helped each other and "compare" them. So, you might want to try as below.
+Jaeyoung: First, I want to ask you how you want to measure civic life. Based on the codebook, you can only measure civic life with whether people involved in a group, clubs and organisations or not, and whether people have done some volunteer work or not. If these two variables are enough for you to infer civic life, I mean conceptualize it, I would recommend you to make two subset of data from ho05 into interviewed before the bombing and after the bombing. And then, get the aggregated number of how long does people helped each other and "compare" them. So, you might want to try as below.
 
 ```{r What is the best way describe how civic life was going before the bombing?}
 
@@ -163,10 +166,10 @@ boxplot(bbombing,abombing)
 If you look into the boxplot, you can see the mean of after bombing is slightly higher than the mean of before bombing. So, it means the civic life, people tend to help each other, more than before the bombing.
 
 
-**K**: One very useful way to take a quick, general look at questions like these is through graphs and tables. Let's make some here.
+Kevin: One very useful way to take a quick, general look at questions like these is through graphs and tables. Let's make some here.
 
 ``` {r figures1, echo=F, warning=F, error=F}
-##Boxplots
+##Boxplot
 p1 <- ggplot(london, aes(x=postbomb, y=hlphrs)) + geom_boxplot() ##this is a weird plot. Let's see why.
 p1
 is.factor(london$postbomb) ## AHA! It's a factor variable, but its not coded as such. Let's fix it.
@@ -174,7 +177,7 @@ london$postbomb <- as.factor(london$postbomb)
 is.factor(london$postbomb)
 p2 <- ggplot(london, aes(x=postbomb, y=hlphrs)) + geom_boxplot() ##this is a weird plot. Let's see why.
 p2 ##huzzah! We see an actual increase in the median HLPHRS after the bombing.
-##Density Plots
+##Density Plot
 p3 <- ggplot(london, aes(x=hlphrs, fill=postbomb)) + geom_density(alpha=0.3)
 p3
 ##Not a graph which is very helpful... Let's try and create a better graph.
@@ -252,15 +255,9 @@ Same thing, pretty much. It appears that it is difficult for us to simply state 
 
 ## Later, after you had worked on this a bit she calls back, "Hey. Thanks so much for helping! I just found this code and thought it might be useful. What do you think? Can you tell me what this means? Does it help me get the right answer about how much time people in the UK were devoting to helping each other and/or supporting groups? Why are there so many ways to describe a single variable anyway? What is the point? Which approaches do you prefer (from those below and others)? Also, are there any plots that would help me tell the right story about this variable? What might they be? What do they look like?"
 
-**JEK Answer**: The reason why there are so many different approaches exist is it doesn't matter which to start. Even if it's about a single variable, we need to take several processes to get a description of it. For example, trimming the data first and getting the mean is not that different from getting the mean first and then trimming. Also, Some codes are long, and some codes are short. I think that is the strength of R. In the past, even if we are trying to get the same variable, we needed a verbose code. But now, some codes are replaced and shortened because many researchers have created and distributed packages and functions. And that's why we can describe a single variable in so many ways. In this case, regarding the code chunk at the bottom, they all give you similar information, but their actual result is slightly different. It is because many researchers have thought about which way is the best way to trimming the data and how we can increase the variable's central tendency and released it. What we have to do is, critically understand those functions and decide which to apply for our research.
-
-If the information you want to get is about collective hours that people helped each other, I think a histogram would work for this case. The histogram is a bar graph that can show you the quantity of the variable. 
-
-
+Jaeyoung: If you wanted to see how much time people in the UK were devoted to helping each other and/or supporting groups, I think you should have applied the sum function, which shows you the aggregated number. But here, mostly, you used mean function so it can give you more macroscopic perspectives. I mean that the mean function tells you how much people in the UK were devoted to helping each other and/or supporting groups "on average". The reason why there are so many different approaches exist is it doesn't matter which to start. Even if it's about a single variable, we need to take several processes to get a description of it. For example, trimming the data first and getting the mean is not that different from getting the mean first and then trimming. Also, Some codes are long, and some codes are short. I think that is the strength of R. In the past, even if we are trying to get the same variable, we needed a verbose code. But now, some codes are replaced and shortened because many researchers have created and distributed packages and functions. And that's why we can describe a single variable in so many ways. In this case, regarding the code chunk at the bottom, they all give you similar information, but their actual result is slightly different. It is because many researchers have thought about which way is the best way to trimming the data and how we can increase the variable's central tendency and released it. What we have to do is, critically understand those functions and decide which to apply for our research. If the information you want to get is about collective hours that people helped each other, I think a histogram would work for this case. The histogram is a bar graph that can show you the quantity of the variable. 
 All these codes generally could help you find out how much time people were sparing for helping each other. The most fundamental idea is to disregard the NA values of help hours data and omit the outliers beyond 0.1 so we can put more weight into the main bulk of the data, or the center. All of them are robustness estimators in other words, they try to make the mean value immune to the small changes.Also they aim decrease or minimize the effect of extremely small or large values on the distribution. However, there are some differences between them, let me explain one by one: 
-
 ```{r deltaforce1robustdescription, results='hide'}
-
 mean(wrkdat$hlphrs, trim = .1, na.rm = TRUE)
 #The mean function gives you a value by taking the aggregation of all values and dividing with the numbers of values in a data. mean with trim option will dropping the number from each end and calculate the mean. na.rm = TRUE will drop the all the NA in your dataset.
 hlp_vec <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
@@ -286,9 +283,7 @@ onestepMest <- function(x) {
   mux <- (1.28 * madn * (U - L) + B) / (n - L - U)
   return(mux)
 }
-
 #
-
 onestepMest(hlp_vec)
 #You applied this onestepMest function you just created in the upper line to hlp_vec variable
 library(robustbase)
@@ -308,7 +303,7 @@ mad(hlp_vec)
 #mad function gives you the median absolute deviation.
 ```
 
-**JEK Extra:**
+Kevin:
 ```{r deltaforce1robustdescription, results='hide'}
 ##Quick check for top values out of curiosity
 
@@ -352,7 +347,12 @@ p <- ggplot(london, aes(x=hlphrs)) + geom_density(alpha=0.3) + geom_vline(xinter
 geom_vline(xintercept=median(london$hlphrs, na.rm=T), color="red", linetype="dotted", size=1.5) +geom_vline(xintercept=winsor.mean(london$hlphrs, trim=.1, na.rm=T), color="darkgoldenrod", linetype="dotted", size=1.5)
 
 ##We see the differences plotted on the graph.
+```
+What is an M-estimator? The M-estimator is a robust regression method often used as an alternative to the least squares method when data has outliers, extreme observations, or does not follow a normal distribution. While the “M” indicates that M estimation is of the maximum likelihood type (Susanti et. al, 2013), M-estimators are actually a broad class of estimators that include the maximal likelihood estimator (Jureckova & Picek, 2005). Least squares estimators and LAV Estimators are also both special cases of M-estimation (Anderson, 2008). M-estimators are especially useful when your data has outliers or is contaminated because one outlier (or heavy tailed errors) can render the normal-distribution based OLS useless; In that case, you have two options: remove the badly-behaving outliers, or use the robust M-estimator.
 
+So what is a MAD? "In statistics, the median absolute deviation (MAD) is a robust measure of the variability of a univariate sample of quantitative data. It can also refer to the population parameter that is estimated by the MAD calculated from a sample." As a robust statistic, in other words, MAD is much less sensitive to outliers (the problem we keep encountering here). 
+
+``` {r mestimator, echo=F, warning=F, error=F}
 library(robustHD)
 onestepMest <- function(x) {
   ## Following Section 2.1 in http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
@@ -377,9 +377,11 @@ fivenum(hlp_vec)
 quantile(hlp_vec, seq(0, 1, .1))
 sd(hlp_vec)
 mad(hlp_vec)
+```
 
-## All these codes generally could help you find out how much time people were sparing for helping each other. The most fundamental idea is to disregard the NA values of help hours data and omit the outliers beyond 0.1 so we can put more weight into the main bulk of the data, or the center. All of them are robustness estimators in other words, they try to make the mean value immune to the small changes.Also they aim decrease or minimize the effect of extremely small or large values on the distribution. However, there are some differences between them, let me explain one by one: 
+Ekin: All these codes generally could help you find out how much time people were sparing for helping each other. The most fundamental idea is to disregard the NA values of help hours data and omit the outliers beyond 0.1 so we can put more weight into the main bulk of the data, or the center. All of them are robustness estimators in other words, they try to make the mean value immune to the small changes.Also they aim decrease or minimize the effect of extremely small or large values on the distribution. However, there are some differences between them, let me explain one by one: 
 
+``` {r}
 mean(wrkdat$hlphrs, trim = .1, na.rm = TRUE) ## This is a trimmed mean value of help hours, without NAs. This function deletes the (.1) smallest and the (.1)largest values from the data and then calculate the mean. 
 hlp_vec <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
 mean(hlp_vec, trim = .1, na.rm = FALSE)
