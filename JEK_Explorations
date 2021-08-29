@@ -1,0 +1,431 @@
+---
+title: 'Exploration 1: Description in One Dimension'
+author: 'Jaeyoung, Ekin, Kevin'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+header-includes:
+    - \usepackage[T1]{fontenc}
+    - \usepackage{textcomp}
+    - \usepackage{fontspec}
+    - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+    - \newfontfamily\themainfont[Ligatures=TeX]{Crimson Text}
+    - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+    - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+    fig_height: 8
+    fig_width: 8
+    latex_engine: xelatex
+    citation_package: biblatex
+    keep_tex: true
+fontsize: 10pt
+geometry: margin=1in
+graphics: yes
+mainfont: "Helvetica"
+bibliography: classbib.bib
+biblio-style: "authoryear-comp,natbib"
+---
+
+<!-- Make this document using library(rmarkdown); render("exploration1.Rmd") -->
+\input{mytexsymbols}
+```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(e1071)
+library(psych)
+```
+
+"Brexit! UKIP! ISIL! Taliban! COVID!" When your old friend calls, she seems to be yelling. Once she calms down, she explains: "I am in charge of Improving Civic Society
+programs for the United Nations, and have been asked to step in to help out at
+the UK Office of Social Capital." After you congratulate her on what appears to
+be a promotion she continues. "The thing is that over here in the UK, they are
+really big on numbers. I asked my staff for a simple report on the status of
+civic society in the UK before all of the recent unrest happened there, say, in
+2005, before the London Bombings. They responded with numbers. When I asked
+them to explain, I found their desks empty, their chairs knocked over, and
+their computers smashed, but their coffee cups still warm and untouched." You
+ask her about her own safety and she responds. "This is all within operational
+parameters. No worries. My problem is that I need to report to the high command
+and I don't know what the right answer is. Now I don't even have numbers. Please help. Can we hop on a Zoom call?" She does not enable video in the Zoom call. However, she begins sending you some
+code. "Here is what I have in terms of output. Can you explain to me what is
+going on with each line of code? 
+
+She continues, "And then I have this from a previous meeting where they talked
+about `codebooks` but I don't think these were the ordinary kind of encrypted
+communication behind enemy lines."
+
+```
+### CODEBOOK
+postbomb: 1=interviewed after the bombing, 0=interviewed before the bombing
+
+grphrs: 6.1.1 Which of the following groups, clubs or organisations
+  have you been involved with during the last 12 months? That's anything
+  you've taken part in, supported, or that you've helped in any way, either
+  on your own or with others. Please exclude giving money and anything that
+  was a requirement of your job.
+
+  6.1.2 In the last 12 months have you given unpaid help to any groups, clubs or
+  organisations in any of the following ways?
+
+  6.1.5 Approximately how many hours have you spent helping this/these group(s),
+  club(s) or organisation(s) in the past 4 weeks?
+
+infhrs: In the last 12 months have you done any of the following things,
+  unpaid, for someone who was not a relative?
+
+  This is any unpaid help you, as an individual, may have given to other people,
+  that is apart from any help given through a group, club or organisation. This
+  could be help for a friend, neighbour or someone else but not a relative.
+
+  6.4.4 Now just thinking about the past 4 weeks. Approximately how many hours
+  have you spent doing this kind of thing/these kind of things in the past 4
+  weeks?
+
+hlphrs: grphrs+infhrs
+```
+
+```{r question1}
+london <- url("http://jakebowers.org/Data/london.rda")
+london <- ho05 ##Key note: the "url" function saves the URL into an object, NOT the data! As you can see here, the data is called "ho05", so after loading the URL we need to rename the dataset itself.
+head(london)
+summary(london$hlphrs)
+##We observe 3 NAs; using "na.rm=T" should help with the errors our friend is getting.
+sum(london$hlphrs, na.rm=T)
+mean(london$hlphrs, na.rm=T) ##Voila!
+
+##See? people helped each other for 5287 hours, for an average of 5 hrs per person (though as we'll see, this is far from accurate!) :)
+
+Extra Notes on the codes:
+#While making a table, include counts of NA only if the count is positive. FYI, useNA = "no" means never include NA, useNA = "always" means you include the NA even for zero counts.
+#wrkdat <- ho05 %>% filter(postbomb == 0)
+#So, if you see the codebook, you may notice that the postbomb variable is a binary variable composed of 1 and 0. So basically, what you are doing here is making a subset of data named wrkdat, and the wrkdat only includes the cases with a postbomb value is 0, which means you only want to see the cases with interviewed before the bombing.
+#sum(wrkdat$hlphrs)
+#The function sum is a command that adds up the values. So, it means you want to see the total aggregated value of the hlphrs variable in the wrkdat dataset.
+##But, the problem is if any of the values in your dataset includes NA, the R will show you NA as a result. So, it's like divided something by 0. As a result, you will want to remove the NA from your dataset. What you need to do is as below.
+#sum(wrkdat$hlphrs, na.rm=T)
+#Basically, it's the same code with the upper line, but I added the option na.rm=T. This option is the same as "do you want me to remove the NA? = True." So the code here is showing me an aggregated number of the hlphrs variable in the wrkdat dataset with excluding all of the NA. 
+```
+
+## I mean shouldn't the total number of hours people spend helping each other be something other than `NA`? 
+
+**JEK Answer**: One of the first and most fundamental aspects of learning how to use R and introductory statistics in general is how to treat NAs. Although it may seem simple from a data-cleaning point of view to simply drop those values, there are arguably cases where inferences can be made as a result of NA responses (think survey responses where the respondent refuses to answer a particular question; their refusal in and of itself can be enlightening when we factor in other variables). I would go so far as to argue that that should be one of the very first task we should do when working with data by making a plan to deal with NAs grounded in research design and sound statistical theory (for example, I'd daresay most stat professors and academics' heads would blow off if we just discarded a whole bunch of data "just because they don't fit"; it would be a rare case of academics being shocked into silence, maybe). You'd want to discern between three general categories of missing data: Missing Completely at Random (MCAR), Missing at Random (MAR), and Missing Not at Random (MNAR). 
+
+In this case here, we can discard the NAs because 1) they make such a small part of the dataset (only 3), and 2) because unless they are huge numbers, excluding or including them wouldn't change much from a location standpoint. Here, let's practice.
+
+```{r littles test, echo=F, warning=F, error=FALSE}
+install.packages("naniar")
+library(naniar)
+mcar_test(london) ## we can see that there are 8 missing data patterns. The chi-square statistic for Little's Test (which is something I'd love to hear more about in class as well as what exactly a chi-squre is used for & when it's applied) is quite high, meaning less auto-correlation.
+```
+
+##Group notes on types of missing data
+When the rows containing missing data cannot be distinguished from the ones that do not contain any NA values, the missing values are classified as Missing Completely at Random or simply MCAR. (There are statistical tools and techniques to find if our data is MCAR, one of which is the Little's test.) Missing at Random means that there is a relationship between the variable being missing but not the values themselves. (MAR data can be imputed using Multiple Imputation techniques or Maximum Likelihood estimations.) MAR data cannot be ignored as in the case of MCAR. This is because, MAR data can induce parameter bias due to conditional missing of data. If the dataset is large we can even chose to ignore the MAR rows. If the characteristics of the data do not fall in either of MCAR and MAR it is classified as MNAR. For example, if the "Income" values are missing for people who have a low salary. It is a classic example of MNAR data. MNAR data is problematic as it biases the estimates. 
+
+## How do you figure out what is going on when you make errors or find something confusing in `R`?" 
+
+First thing to do is always check the error message. I (K) probably lost enough hours to fill an NFL season's worth of advertisements scanning through my code searching for missing "("s or something similar. If it's not a syntax error, check the error message to make sure you're doing what you are actually intending to do: like all computer programs, R is at its core a logic machine. Look here at an earlier example.
+
+```{r littles test2, echo=F}
+install.packages("naniar")
+library(naniar)
+mcar_test(london) ## we can see that there are 8 missing data patterns. The chi-square statistic for Little's Test (which is something I'd love to hear more about in class as well as what exactly a chi-square is used for & when it's applied) is quite high, meaning less auto-correlation.
+mcar_test(london$hlphrs)
+##
+```
+We see an error which says, "input must inherit from data.frame." Therefore, I might assume that the function we are trying to use is not suitable for the type of object we're putting through it (a variable/column, when the function require an entire data frame.) We'd need to get creative.
+
+```{r littles test3, echo=F}
+install.packages("naniar")
+library(naniar)
+mcar_test(london) ## we can see that there are 8 missing data patterns. The chi-square statistic for Little's Test (which is something I'd love to hear more about in class as well as what exactly a chi-square is used for & when it's applied) is quite high, meaning less auto-correlation.
+mcar_test(london$hlphrs)
+test1 <- as.data.frame(london$hlphrs)
+mcar_test(test1)
+##
+```
+By reforming the data into a way the function can run, we've solved that pesky error message! Whether or not that is actually correct technique is an entirely different (and more important) matter, though.
+
+## She asks, "What is the best way to describe how civic life was going before the bombings in 2005 (let alone before all of the other disruptions occurred in the UK)? What is the right answer?"
+
+
+First, we want to ask you how you want to measure civic life. Based on the codebook, you can only measure civic life with whether people involved in a group, clubs and organisations or not, and whether people have done some volunteer work or not. If these two variables are enough for you to infer civic life, I mean conceptualize it, I would recommend you to make two subset of data from ho05 into interviewed before the bombing and after the bombing. And then, get the aggregated number of how long does people helped each other and "compare" them. So, you might want to try as below.
+
+```{r What is the best way describe how civic life was going before the bombing?}
+
+beforebomb <- ho05 %>% filter(postbomb == 0)
+afterbomb <- ho05 %>% filter(postbomb == 1)
+bbombing <- summary(beforebomb$hlphrs, na.rm=T)
+abombing <- summary(afterbomb$hlphrs, na.rm=T)
+boxplot(bbombing,abombing)
+
+```
+If you look into the boxplot, you can see the mean of after bombing is slightly higher than the mean of before bombing. So, it means the civic life, people tend to help each other, more than before the bombing.
+
+
+**K**: One very useful way to take a quick, general look at questions like these is through graphs and tables. Let's make some here.
+
+``` {r figures1, echo=F, warning=F, error=F}
+##Boxplots
+p1 <- ggplot(london, aes(x=postbomb, y=hlphrs)) + geom_boxplot() ##this is a weird plot. Let's see why.
+p1
+is.factor(london$postbomb) ## AHA! It's a factor variable, but its not coded as such. Let's fix it.
+london$postbomb <- as.factor(london$postbomb)
+is.factor(london$postbomb)
+p2 <- ggplot(london, aes(x=postbomb, y=hlphrs)) + geom_boxplot() ##this is a weird plot. Let's see why.
+p2 ##huzzah! We see an actual increase in the median HLPHRS after the bombing.
+##Density Plots
+p3 <- ggplot(london, aes(x=hlphrs, fill=postbomb)) + geom_density(alpha=0.3)
+p3
+##Not a graph which is very helpful... Let's try and create a better graph.
+ftable(london$hlphrs>50) ## we see that only about 2 percent of respondents have values above 50 hrs.
+london$hlphrs_2 <- ifelse(london$hlphrs>50, NA, london$hlphrs)
+p4 <- ggplot(london, aes(x=hlphrs_2, fill=postbomb)) + geom_density(alpha=0.3)+ scale_color_brewer(palette = "rainbow")
+p4 ## much better!
+
+##We could also check the difference in means, though that doesn't really tell us much unless we get a bit sophisticated. A variety of tests come to mind for this kind of relationship (logistic regression, for example). Here's a great resource for down the road https://stats.idre.ucla.edu/other/mult-pkg/whatstat/ Here, though, we'll use a simple t.test. Note that the skewness of the data is something we should deal with: it's insane at 4.99!
+round(skewness(london$hlphrs, na.rm=T), 3)  
+round(kurtosis(london$hlphrs, na.rm=T), 3) #excess kurtosis describes the tail shape of the data distribution. The normal distribution has zero excess kurtosis and thus the standard tail shape. It is said to be mesokurtic. Negative excess kurtosis would indicate a thin-tailed data distribution, and is said to be platykurtic. Positive excess kurtosis would indicate a fat-tailed distribution, and is said to be leptokurtic. 
+
+## round function example to make it easier to see and present statistics. However, let's disregard that for now: an excellent summary of the concerns about non-normality and t-tests is here: https://thestatsgeek.com/2013/09/28/the-t-test-and-robustness-to-non-normality/ 
+
+t.test(london$hlphrs ~ london$postbomb)
+##THe p-value is 0.52, so we do not reject the null hypothesis. This could be because of skewness.
+
+one.way<- aov(data=london, hlphrs ~ postbomb)
+TukeyHSD(one.way) ##ANOVA is sensitive to skewness; not the best test here unless we use a non-parametric ANOVA.
+
+ktest <- kruskal.test(london$hlphrs ~ london$postbomb)
+#can't use Tukey since this is non-parametric; something similar https://stackoverflow.com/questions/2478272/kruskal-wallis-test-with-details-on-pairwise-comparisons 
+install.packages("pgirmess")
+library(pgirmess)
+kruskalmc(london$hlphrs, london$postbomb)
+
+##What is the Kruskal-Wallis test? Oversimplified, it is an one-way ANOVA which is non-parametric, meaning it does not assume normal distribution of residuals. This is probably a grossly oversimplified way to do it, but it's here for future reference.
+wilcox.test(london$hlphrs ~ london$postbomb)
+##What is the Wilcoxon test? The Wilcoxon signed rank test (also called the Wilcoxon signed rank sum test) is a non-parametric test to compare data. It usually means that you know the population data does not have a normal distribution. The Wilcoxon signed rank test should be used if the differences between pairs of data are non-normally distributed. The Wilcoxon signed rank test compares your sample median against a hypothetical median. The Wilcoxon matched-pairs signed rank test computes the difference between each set of matched pairs, then follows the same procedure as the signed rank test to compare the sample against some median.
+```
+These are just some of the potential ways we can test for differences. All of our tests do not support the hypothesis that after the bombing people have been more helpful. Perhaps there are alternative explanations: maybe people are more eager to appear helpful after an event such as a bombing, or maybe the way the variable is created is causing the issues. What happens if we disaggregate it?
+
+``` {r disaggregated data, echo=F, warning=F, error=F}
+
+##grphrs+infhrs
+summary(london$grphrs)
+summary(london$infhrs)
+ftable(london$grphrs<25)
+ftable(london$infhrs<25)
+
+a1 <- ggplot(london, aes(x=postbomb, y=grphrs)) + geom_boxplot() 
+a2 <- ggplot(london, aes(x=postbomb, y=infhrs)) + geom_boxplot() 
+##nothing to see here.
+
+a3<- ggplot(london, aes(x=grphrs, fill= postbomb)) + geom_density(alpha=0.3) + xlim(0,25) #even simpler way of "zooming!" Yay for Google.
+a4<- ggplot(london, aes(x=infhrs, fill= postbomb)) + geom_density(alpha=0.3) + xlim(0,25)
+
+round(skewness(london$grphrs, na.rm=T), 3)
+round(skewness(london$infhrs, na.rm=T), 3)
+round(kurtosis(london$infhrs, na.rm=T), 3)
+round(kurtosis(london$grphrs, na.rm=T), 3)
+##Holy cow, it's even worse!!!
+
+t.test(london$grphrs ~ london$postbomb)
+t.test(london$infhrs ~ london$postbomb)
+##THe p-value is 0.52, so we do not reject the null hypothesis. This could be because of skewness.
+
+one.way1<- aov(data=london, grphrs ~ postbomb)
+TukeyHSD(one.way1) ##ANOVA is sensitive to skewness; not the best test here unless we use a non-parametric ANOVA.
+one.way2<- aov(data=london, infhrs ~ postbomb)
+TukeyHSD(one.way2)
+
+ktest2 <- kruskal.test(london$infhrs ~ london$postbomb)
+ktest3 <- kruskal.test(london$grphrs ~ london$postbomb)
+#can't use Tukey since this is non-parametric; something similar https://stackoverflow.com/questions/2478272/kruskal-wallis-test-with-details-on-pairwise-comparisons 
+install.packages("pgirmess")
+library(pgirmess)
+kruskalmc(london$grphrs, london$postbomb)
+kruskalmc(london$infhrs, london$postbomb)
+##What is the Kruskal-Wallis test? Oversimplified, it is an one-way ANOVA which is non-parametric, meaning it does not assume normal distribution of residuals. This is probably a grossly oversimplified way to do it, but it's here for future reference.
+wilcox.test(london$grphrs ~ london$postbomb)
+wilcox.test(london$infhrs ~ london$postbomb)
+```
+Same thing, pretty much. It appears that it is difficult for us to simply state that there is a difference between before and after the bombings attributable to the bombings (note that the dependent variable is "bombing"). 
+
+## Later, after you had worked on this a bit she calls back, "Hey. Thanks so much for helping! I just found this code and thought it might be useful. What do you think? Can you tell me what this means? Does it help me get the right answer about how much time people in the UK were devoting to helping each other and/or supporting groups? Why are there so many ways to describe a single variable anyway? What is the point? Which approaches do you prefer (from those below and others)? Also, are there any plots that would help me tell the right story about this variable? What might they be? What do they look like?"
+
+**JEK Answer**: The reason why there are so many different approaches exist is it doesn't matter which to start. Even if it's about a single variable, we need to take several processes to get a description of it. For example, trimming the data first and getting the mean is not that different from getting the mean first and then trimming. Also, Some codes are long, and some codes are short. I think that is the strength of R. In the past, even if we are trying to get the same variable, we needed a verbose code. But now, some codes are replaced and shortened because many researchers have created and distributed packages and functions. And that's why we can describe a single variable in so many ways. In this case, regarding the code chunk at the bottom, they all give you similar information, but their actual result is slightly different. It is because many researchers have thought about which way is the best way to trimming the data and how we can increase the variable's central tendency and released it. What we have to do is, critically understand those functions and decide which to apply for our research.
+
+If the information you want to get is about collective hours that people helped each other, I think a histogram would work for this case. The histogram is a bar graph that can show you the quantity of the variable. 
+
+
+All these codes generally could help you find out how much time people were sparing for helping each other. The most fundamental idea is to disregard the NA values of help hours data and omit the outliers beyond 0.1 so we can put more weight into the main bulk of the data, or the center. All of them are robustness estimators in other words, they try to make the mean value immune to the small changes.Also they aim decrease or minimize the effect of extremely small or large values on the distribution. However, there are some differences between them, let me explain one by one: 
+
+```{r deltaforce1robustdescription, results='hide'}
+
+mean(wrkdat$hlphrs, trim = .1, na.rm = TRUE)
+#The mean function gives you a value by taking the aggregation of all values and dividing with the numbers of values in a data. mean with trim option will dropping the number from each end and calculate the mean. na.rm = TRUE will drop the all the NA in your dataset.
+hlp_vec <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
+#Let there is a variable name hlp_vec. With the select function in dplyr package, selet hlphrs variable in wrkdata. In the mean time, if there is a NA in hlphrs variable filter it. 
+mean(hlp_vec, trim = .1, na.rm = FALSE)
+#It will show you the mean of the hlp_vec variable with dropping one from each end but with including the N2A values.
+library(psych)
+#load the psych package
+winsor.mean(hlp_vec)
+#The function winsor.mean shows you the mean value after trimmed each end. So, here the code will show you mean value of hlp_vec variable. But the thing is winsor.mean does not change your actual data.  
+library(robustHD)
+#load the robustHD package
+mean(winsorize(hlp_vec))
+#Here, you will want to read from inside of parentheses to outside. So, it means winsorize hl_vec variable and then show me the mean of it. The difference between winsor.mean(hlp_Vec) and this code is whether you want to make actual changes in your data or not. This one will delte some of the cases in your data.
+onestepMest <- function(x) {
+  ## Following Section 2.1 in http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
+  madn <- mad(x, constant = 1.4826) ## 1/1.4826 = .6745
+  M <- (abs(x - median(x)) / madn) > 1.28
+  U <- sum(x > M)
+  L <- sum(x < M)
+  B <- length(x) - U - L
+  n <- length(x)
+  mux <- (1.28 * madn * (U - L) + B) / (n - L - U)
+  return(mux)
+}
+
+#
+
+onestepMest(hlp_vec)
+#You applied this onestepMest function you just created in the upper line to hlp_vec variable
+library(robustbase)
+huberM_results <- huberM(hlp_vec)
+#With huberM function, you are storing the huber M estimator to huberM_results.
+print(huberM_results$mu)
+#It will give you huberM estimator of hlp_vec but since you've applied mu option, it will show you only the initial location estimator.
+print(huberM_results$s)
+#It will give you huberM estimator of hlp_vec but since you've applied s option, it will show you scale estimator held constant through the iterations
+fivenum(hlp_vec)
+#fivenum function give you five summary information. They are minimum, lower-hinge, median, upper-hinge, maximum for the input data.
+quantile(hlp_vec, seq(0, 1, .1))
+#Basically, what quantile does is cut the variables into every 25%. So, it will show you 0%, 25%, 50%, and 100%. However, in this code you applied option seq. when you use the seq, you will write where to start which is 0, and where to end which is 1, and in what unit you want to cut the variable.
+sd(hlp_vec)
+#sd function gives you the standard deviation of the variable hlp_vec
+mad(hlp_vec)
+#mad function gives you the median absolute deviation.
+```
+
+**JEK Extra:**
+```{r deltaforce1robustdescription, results='hide'}
+##Quick check for top values out of curiosity
+
+aa <- as.data.frame(london$hlphrs)
+aa_2 <- aa[order(-london$hlphrs),]
+aa_3 <- aa[order(london$hlphrs),]
+table(head(aa_2, 50))
+table(head(aa_3, 950))
+##this is enough evidence to show us that the large values probably affect the mean!
+
+mean(london$hlphrs, trim = .1, na.rm = TRUE) 
+##Here we are trimming the mean by removing outliers and NAs.
+library(DescTools)
+hlp_vec <- unlist(london %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
+hlp_vec_t <- Trim(london$hlphrs, trim=.2, na.rm=T)
+hlp_vec_w <- winsorize(hlp_vec, trim=.2, na.rm=T)
+##hlp_vec is a vector which is a transformed version of our "hlphrs" data with NAs removed.
+mean(hlp_vec, trim = .1, na.rm = FALSE)
+##Exactly the same values. The only difference is that the hlp_vec is a permanent change, so we can run not only the means but also other stats like standard deviation.
+winsor.mean(hlp_vec,trim=.1, na.rm=T)
+winsor.mean(london$hlphrs)
+summary(hlp_vec)
+summary(winsorize(hlp_vec))
+##We can see what winsorizing does here. "Winsorizing" helps alleviate the problem of means that "the tails of a distribution can dominate its value". Winsorizing means "pulling in" the tails on the left and right. According to Wilcox, "choosing 0.5 to achieve the highest possible breakdown point, though there are some negative consequences if y is too far from 0." Note that winsorizing is not equivalent to simply excluding data, which is a simpler procedure, called trimming or truncation, but is a method of censoring data. In a trimmed estimator, the extreme values are discarded; in a winsorized estimator, the extreme values are instead replaced by certain percentiles (the trimmed minimum and maximum). Let's try.
+
+#Means
+mean(hlp_vec_t, na.rm=T)
+mean(hlp_vec_w, na.rm=T)
+#Medians
+median(hlp_vec_t, na.rm=T)
+median(hlp_vec_w, na.rm=T)
+#SD
+sd(hlp_vec_t, na.rm=T)
+sd(hlp_vec_w, na.rm=T)
+##We see that compared to truncating/trimming the means, Winsorizing decreases the distance between medians and means. Maybe something went wrong with the SD: the SD is the same as the mean!
+winsor.mean(hlp_vec,trim=.1)
+winsor.mean(hlp_vec,trim=.5)
+median(hlp_vec)
+##When we set the trim level (1-y) at 0.5 per Wilcox's assertion, we see that the mean = median.
+p <- ggplot(london, aes(x=hlphrs)) + geom_density(alpha=0.3) + geom_vline(xintercept=mean(london$hlphrs, na.rm=T), color="blue", linetype="dotted", size=1.5)+
+geom_vline(xintercept=median(london$hlphrs, na.rm=T), color="red", linetype="dotted", size=1.5) +geom_vline(xintercept=winsor.mean(london$hlphrs, trim=.1, na.rm=T), color="darkgoldenrod", linetype="dotted", size=1.5)
+
+##We see the differences plotted on the graph.
+
+library(robustHD)
+onestepMest <- function(x) {
+  ## Following Section 2.1 in http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
+  madn <- mad(x, constant = 1.4826) ## 1/1.4826 = .6745
+  M <- (abs(x - median(x)) / madn) > 1.28
+  U <- sum(x > M)
+  L <- sum(x < M)
+  B <- length(x) - U - L
+  n <- length(x)
+  mux <- (1.28 * madn * (U - L) + B) / (n - L - U)
+  return(mux)
+}
+
+##What is an M-estimator? The M-estimator is a robust regression method often used as an alternative to the least squares method when data has outliers, extreme observations, or does not follow a normal distribution. While the “M” indicates that M estimation is of the maximum likelihood type (Susanti et. al, 2013), M-estimators are actually a broad class of estimators that include the maximal likelihood estimator (Jureckova & Picek, 2005). Least squares estimators and LAV Estimators are also both special cases of M-estimation (Anderson, 2008). M-estimators are especially useful when your data has outliers or is contaminated because one outlier (or heavy tailed errors) can render the normal-distribution based OLS useless; In that case, you have two options: remove the badly-behaving outliers, or use the robust M-estimator.
+
+onestepMest(hlp_vec)
+library(robustbase)
+huberM_results <- huberM(hlp_vec)
+print(huberM_results$mu)
+print(huberM_results$s)
+fivenum(hlp_vec)
+quantile(hlp_vec, seq(0, 1, .1))
+sd(hlp_vec)
+mad(hlp_vec)
+
+## All these codes generally could help you find out how much time people were sparing for helping each other. The most fundamental idea is to disregard the NA values of help hours data and omit the outliers beyond 0.1 so we can put more weight into the main bulk of the data, or the center. All of them are robustness estimators in other words, they try to make the mean value immune to the small changes.Also they aim decrease or minimize the effect of extremely small or large values on the distribution. However, there are some differences between them, let me explain one by one: 
+
+mean(wrkdat$hlphrs, trim = .1, na.rm = TRUE) ## This is a trimmed mean value of help hours, without NAs. This function deletes the (.1) smallest and the (.1)largest values from the data and then calculate the mean. 
+hlp_vec <- unlist(wrkdat %>% dplyr::select(hlphrs) %>% filter(!is.na(hlphrs)))
+mean(hlp_vec, trim = .1, na.rm = FALSE)
+
+## This one selects the help hours from the data set, filters the non-NA values and assigns it to a vector. Therefore, this takes the mean of a vector rather than a data object. Since this is a mean() function, again outliers are totally deleted. Mean function can work for both data objects and numeric vectors. However, as you can see, the results are identical, so these are two different ways of attaining the same output. 
+
+library(psych)
+winsor.mean(hlp_vec)
+
+## This function takes the numeric vector of hlp_vec, but does not totally disregard the outliers. They still have a weight in the mean output however, their effect is minimized by changing the smallest and largest values with a percentile. The result of this function as you can see, is not remotely located from the first two functions.
+
+library(robustHD)
+mean(winsorize(hlp_vec)) ##  This function is a winsorized mean on the other hand. This again decrease the weight of the outliers by replacing them with the closest observation to them. Then it takes the mean of the vector. However, in this case, as you can see in the result, the mean value is actually far from the first three, meaning that you lost many observations while discarding the outliers. 
+
+## I would prefer winsor.mean option because trimming the outliers totally would result in loss of data and observations. It is only preferable if you are confident in the reasons that make these observations outliers, therefore irrelevant. However, it might be useful to still have them in the mean value with a ligther weight in order not to use potential meaningful data. Therefore, in this case, I think winsor.mean function could give you a better grasp of the life before bombings in the UK. 
+
+
+onestepMest <- function(x) {
+  ## Following Section 2.1 in http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
+  ## Ekin: This is a function assigned to onestepMest vector, in order to calculate the confidence interval of one step M-estimator of central tendency.Rather than resampling the sample in a loop, this resamples it only once. Then we specify an outlier of X. The enxt steps will build up to the one-step Huber M-estimator. 
+  madn <- mad(x, constant = 1.4826) ## 1/1.4826 = .6745 
+  ## MAD function calculates the median absolute deviation. It subtracts the median from each element and takes the absolute value of the result. From these absolute values, it calculates the median again. In this case, it calculates the median of the absolute deviation of outliers (x) from the original median. This is a robust measure of variability. 1.14826 is a default constant here. 
+  
+  M <- (abs(x - median(x)) / madn) > 1.28 
+  ## The outliers, MAD of which are higher than 1.28, are stored in the M. 
+  U <- sum(x > M) ## U is the outliers value of which is greater than M. 
+  L <- sum(x < M) ## L is the outliers, which are less then M. 
+  B <- length(x) - U - L ## B is the non-outliers or let's the the data in the center bulk. 
+  n <- length(x) ##n is the size of sample population. 
+  mux <- (1.28 * madn * (U - L) + B) / (n - L - U)
+## This is the actual one-step Huber M-estimator function. As a result of this, the sample becomes more robust because in the original standard deviation calculations, large deviations have a large impact as the distances from the average are calculated with a square. However, with MAD effect of some outliers can be disregarded. 
+    return(mux)
+}
+
+onestepMest(hlp_vec) ## Ekin: This function actually calculates the one-step Huber M-estimator for the help, which was hlphrs without NA values, trimmed at .1 percentile. This is another way of decreasing the impact of outliers on the center bulk of the data. This is another tool to help you understand the gist of the civic life in the UK before bombings. 
+-vec. 
+library(robustbase)
+huberM_results <- huberM(hlp_vec)
+print(huberM_results$mu)
+print(huberM_results$s)
+fivenum(hlp_vec)
+quantile(hlp_vec, seq(0, 1, .1))
+sd(hlp_vec) 
+mad(hlp_vec)
+```
+
+<!-- see also https://dornsife.usc.edu/labs/rwilcox/software/ and WRS:::mest  https://dornsife.usc.edu/assets/sites/239/docs/WRS2.pdf and the MASS library--->
+
+# References
