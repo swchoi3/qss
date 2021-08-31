@@ -46,7 +46,7 @@ about data. Can you help? Here are the two statements."
 
 > Support for anti-immigration populists like Trump or the UKIP party arises from anti-feminism more than nativism or or socioeconomic characteristics like income or education."
 
-"I managed to find a survey that is supposed to be representative of people in the UK."
+> "I managed to find a survey that is supposed to be representative of people in the UK."
 
 ```{r readdata}
 # library(foreign) ## For older Stata files
@@ -56,13 +56,13 @@ bes <- read.dta13("http://jakebowers.org/Data/BES2015/bes_f2f_original_v3.0.dta"
 
 "And I found a
 (codebook)[http://www.jakebowers.org/Data/BES2015/BES_2015_f2f_v3.0_codebook.pdf]
-too. And have learned enough about R to investigate and even recode some variables."
+too. And have learned enough about R to investigate and even recode some variables. I'm sure I didn't do enough to get rid of missing values, change values to make the variables more meaningful, etc."
 
 ```{r sometabs, results="hide"}
-table(bes$y09,exclude=c()) ## Male=1, Female=2 gender (41 of 49 in footer)
-bes$female <- as.numeric(bes$y09==2) ## make a variable called female=1 if female and 0 if not
+table(bes$y09, exclude = c()) ## Male=1, Female=2 gender (41 of 49 in footer)
+bes$female <- as.numeric(bes$y09 == 2) ## make a variable called female=1 if female and 0 if not
 ## Check the recode
-with(bes,table(female,y09,exclude=c()))
+with(bes, table(female, y09, exclude = c()))
 table(bes$r03, useNA = "ifany") ##  Support for equality for women (page 29 of 49), search for "R 3"
 table(bes$r03, exclude = c()) ## lower numbers less support for equality for women.
 ## Give the variable an easier name to remeber and code don't know (DK) answers as
@@ -72,6 +72,8 @@ bes$women_equal <- with(bes, ifelse(r03 == -1, NA, r03))
 with(bes, table(women_equal, r03, exclude = c()))
 table(bes$Age, useNA = "ifany")
 table(bes$y01, useNA = "ifany") ## Income (37 of 49), higher=higher income bracket
+## Recode negative numbers to be missing
+bes$income <- with(bes, ifelse(y01<0,NA,y01))
 table(bes$j05, useNA = "ifany") ## Immigration (15 of 49)
 table(bes$education, useNA = "ifany") ## based on y 13a
 ## Create an education level variable
@@ -137,18 +139,84 @@ about **relationships** in the data at hand. Mostly these are represented by the
 `rq` ( in the quantreg package) as ways to summarize two dimensional
 relationships.
 
-> I also realized that one could calculate summaries by group but the following
-> gives me lots of NAs. I also got confused by ggplot.
+> I'm particularly confused about "least squares". A friend sent me some code
+> that she claims "does least squares" but I'm not even sure what that means or
+> why I should care. I also thought that you could find the least squares
+> solution in one line rather than needing a whole function. 
+
+
+```{r}
+sum_sq_resids <- function(a, b, y, z) {
+  yhat <- a + b * z
+  ehat <- y - yhat
+  thessr <- sum(ehat^2)
+  return(thessr)
+}
+
+small_dat <- dplyr::select(bes,ukipvoter, income, women_equal, edlevel,
+    edlevelF, j05) %>% na.omit()
+
+## a has to be between 0 and 1, b also should be between 0 and 1.
+## a=mean of ukipvoter when income=0 or proportion of ukipvoter when income=0
+## b=difference in proportion of ukipvoter between income=0 and income=1. (or
+## any 1 unit difference)
+
+## Is this the least squares solution?
+sum_sq_resids(a = .1, b = .12, y = small_dat$ukipvoter, z = small_dat$income)
+## Or this?
+sum_sq_resids(a = 0, b = .2, y = small_dat$ukipvoter, z = small_dat$income)
+
+possible_solutions <- expand_grid(a=seq(0,1,.1),b=seq(-1,1,.1))
+
+library(purrr)
+
+res <- pmap_dbl(possible_solutions,.f=function(a,b){ sum_sq_resids(a =a, b = b, y = small_dat$ukipvoter, z = small_dat$income) })
+
+possible_solutions$ssr <- res
+
+## The lowest sum of squared residuals that we tried:
+## So does this mean that the difference in ukip voting for each unit of the
+## income scale is 0?
+filter(possible_solutions, ssr==min(ssr))
+
+## Hmmm... maybe there is a better solution. Is a=.1 and b=0 really the
+## **least** one?
+
+## Lets ask R to find the lowest ssr.
+sum_sq_resids_vec <- function(x, y, z) {
+    # Allowing the coefficients to be a vector
+  yhat <- x[1] + x[2] * z
+  ehat <- y - yhat
+  thessr <- sum(ehat^2)
+  return(thessr)
+}
+
+
+## Seems like there is a better solution that we missed.
+res2 <- optim(par=c(0,0),fn=sum_sq_resids_vec,y = small_dat$ukipvoter, z = small_dat$income)
+res2$par
+## smaller than ssr=203
+res2$value
+
+plot_res <- ggplot(possible_solutions,aes(x=a,y=b,z=ssr))+
+   geom_contour_filled()+
+   geom_point(aes(x=res2$par[1],y=res2$par[2]))
+print(plot_res)
+
+```
+
+
+> I also realized that one could calculate summaries by group but the following gives me lots of NAs. I also got confused by ggplot. So many error messages!  Do error messages mean I'm a bad person? I never had error messages in my life until I started using R! I wonder if this means I'm not meant to use R? (I know that this is [fixed mindset](https://www.youtube.com/watch?v=KUWn_TJTrnU) thinking that I should avoid. I'm just a bit stressed about all of the negative feedback I'm getting from R.)
 
 ```{r}
 bes_fem_group <- bes %>%
-    group_by(women_equal) %>%
-    summarize(
-        prop_ukip_vt = mean(ukipvoter), 
-        prop_ukip_pid = mean(ukip_pid)
-    )
-    
-## ukip_fem_plot <- ggplot(data = bes_fem_group, 
+  group_by(women_equal) %>%
+  summarize(
+    prop_ukip_vt = mean(ukipvoter),
+    prop_ukip_pid = mean(ukip_pid)
+  )
+
+## ukip_fem_plot <- ggplot(data = bes_fem_group,
 ##         aes(x = women_equal, y = prop_ukip_pid)) +
 ##     geom_line() + ## using grouped data
 ##     geom_point() +
@@ -159,7 +227,7 @@ bes_fem_group <- bes %>%
 ##         method='rlm',se=FALSE)+
 ##     geom_jitter(data=bes,aes(x=women_equal,y=ukip_pid),width=.1,height=.1)+
 ##     stat_summary(fun="mean",color="red")
-## 
+##
 ## print(ukip_fem_plot)
 ```
 
