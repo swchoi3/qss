@@ -2,26 +2,32 @@
 title: 'Exploration 2: Description of Relationships'
 author: 'Jake Bowers'
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
-bibliography: classbib.bib
+header-includes:
+    - \usepackage[T1]{fontenc}
+    - \usepackage{textcomp}
+    - \usepackage{fontspec}
+    - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+    - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+    - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+    fig_height: 8
+    fig_width: 8
+    latex_engine: xelatex
+    citation_package: biblatex
+    keep_tex: true
 fontsize: 10pt
 geometry: margin=1in
-mainfont: "Crimson Text"
 graphics: yes
-output:
-  html_document:
-    fig_caption: yes
-    fig_height: 4
-    fig_width: 4
-  pdf_document:
-    latex_engine: xelatex
-    fig_caption: yes
-    fig_height: 4
-    fig_width: 4
+mainfont: "Helvetica"
+bibliography: classbib.bib
+biblio-style: "authoryear-comp,natbib"
 ---
 
-<!-- Make this document using library(rmarkdown); render("exploration1.Rmd") -->
+<!-- Make this document using library(rmarkdown); render("exploration2.Rmd") -->
 \input{mytexsymbols}
-
 
 ```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
 library(here)
@@ -38,9 +44,7 @@ providing answers based in data? We got into a shouting matching and only
 stopped when I mentioned the word 'data'. I don't know much
 about data. Can you help? Here are the two statements."
 
-> Support for anti-immigration populists like Trump or the UKIP party arises from anti-feminism more than nativism."
-
-> In countries like the UK, education and income are not strongly related."
+> Support for anti-immigration populists like Trump or the UKIP party arises from anti-feminism more than nativism or or socioeconomic characteristics like income or education."
 
 "I managed to find a survey that is supposed to be representative of people in the UK."
 
@@ -50,75 +54,112 @@ library(readstata13)
 bes <- read.dta13("http://jakebowers.org/Data/BES2015/bes_f2f_original_v3.0.dta", convert.factors = FALSE)
 ```
 
-"And I found a (codebook)[http://jakebowers.org/Data] too. And have learned enough about R to investigate some variables."
+"And I found a
+(codebook)[http://www.jakebowers.org/Data/BES2015/BES_2015_f2f_v3.0_codebook.pdf]
+too. And have learned enough about R to investigate and even recode some variables."
 
 ```{r sometabs, results="hide"}
-table(bes$r03, useNA = "ifany") ##  Feminism
+table(bes$y09,exclude=c()) ## Male=1, Female=2 gender (41 of 49 in footer)
+bes$female <- as.numeric(bes$y09==2) ## make a variable called female=1 if female and 0 if not
+## Check the recode
+with(bes,table(female,y09,exclude=c()))
+table(bes$r03, useNA = "ifany") ##  Support for equality for women (page 29 of 49), search for "R 3"
+table(bes$r03, exclude = c()) ## lower numbers less support for equality for women.
+## Give the variable an easier name to remeber and code don't know (DK) answers as
+## missing. I wonder if the DK people oppose equality? Or why they say DK?
+bes$women_equal <- with(bes, ifelse(r03 == -1, NA, r03))
+## Check the recode
+with(bes, table(women_equal, r03, exclude = c()))
 table(bes$Age, useNA = "ifany")
-table(bes$y01, useNA = "ifany") ## Income
-table(bes$j05, useNA = "ifany") ## Immigration
-table(bes$education, useNA = "ifany")
-table(bes$b02, useNA = "ifany")
-table(bes$b04, useNA = "ifany")
+table(bes$y01, useNA = "ifany") ## Income (37 of 49), higher=higher income bracket
+table(bes$j05, useNA = "ifany") ## Immigration (15 of 49)
+table(bes$education, useNA = "ifany") ## based on y 13a
+## Create an education level variable
+bes <- bes %>% mutate(edlevel = case_when(
+  education == 12 ~ 1,
+  education == 10 ~ 2,
+  education == 11 ~ 2,
+  education == 7 ~ 3,
+  education == 8 ~ 3,
+  education == 3 ~ 4,
+  education == 2 ~ 4,
+  education == 1 ~ 5,
+  education == 0 ~ 0,
+  education == 17 ~ 1,
+  education == 15 ~ 1,
+  education == 16 ~ 2,
+  education == 14 ~ 2,
+  education == 13 ~ 3,
+  education == 5 ~ 4,
+  education == 4 ~ 4,
+  education == 18 ~ NA_real_,
+  education == 6 ~ 3,
+  education == 9 ~ 3
+))
+# edlevel 0 "No qualifications" 1 "GCSE D-G" 2 "GCSE A*-C" 3 "A-level" 4 "Undergraduate" 5 "Postgrad" 6"other"
+with(bes, table(education, edlevel, exclude = c()))
+## Convert education level into categories in case that is easier than treating
+## it as a continuous numeric variable.
+bes$edlevelF <- factor(bes$edlevel, labels = c(
+  "No qualifications",
+  "GCSE D-G", "GCSE A*-C", "A-level", "Undergraduate", "Postgrad"
+))
+with(bes, table(edlevel, edlevelF, exclude = c()))
+table(bes$b02, useNA = "ifany") ## Party voted in last election (4 of 49)
+table(bes$b04, useNA = "ifany") ## If you have voted which party would you have voted for
 ## 1 if voted or would have voted for ukip
-bes$ukipvoter <- as.numeric(ifelse(is.na(bes$b02), bes$b04 == 8, bes$b02 == 7))
+bes$ukipvoter <- with(bes, as.numeric(ifelse(is.na(b02), b04 == 8, b02 == 7)))
 table(bes$ukipvoter, useNA = "ifany")
-table(bes$d01, useNA = "ifany") # Party ID
+table(bes$d01, useNA = "ifany") # Party ID (11 of 49)
+## UKIP and British National Party are basically the same, I think
+bes$ukip_pid <- as.numeric(bes$d01 %in% c(2, 8))
+with(bes, table(d01, ukip_pid, exclude = c()))
 ```
 
-"What do you think? Between these variables, and the others in the codebook,
+> What do you think? Between these variables, and the others in the codebook,
 can you provide some evidence for or against those statements? Since this was
 such a heated discussion in our staff meeting, I'd like to see at least three
-ways to describe the relationships including that least squares stuff that
-people always talk about. And I'll need you to justify the weaknesses and
+ways to describe these two-way relationships including that least squares stuff that
+people always talk about. I'll need you to justify the weaknesses and
 strengths of the tactics you choose to use. And, especially for the least
 squares description, can you please help me understand why it is called least
 squares and why I should care about least squares versus most squares or least
-something else?  Right now, we just want to describe relationships so
-$p$-values or confidence intervals would not be helpful."
+something else?  Right now, we just want to describe relationships so please
+don't show me standard errors, $p$-values, confidence intervals, or posterior
+density intervals (this also means that "homoskedasticity" and
+"heteroskedasticity" and "statistical power" and "precision" and "efficiency"
+and "normality" are also words I don't need to hear). I really just want to know
+about **relationships** in the data at hand. Mostly these are represented by the
+**coefficients** of different data models/line fitters/smoothers.
+
+> I found R commands like `lm`, `loess`, `lmrob` (in the robustbase package),
+> `rlm` (in the MASS package),
+`rq` ( in the quantreg package) as ways to summarize two dimensional
+relationships.
+
+> I also realized that one could calculate summaries by group but the following
+> gives me lots of NAs. I also got confused by ggplot.
 
 ```{r}
-lm1 <- lm(ukipvoter ~ r03, data = bes, subset = r03 != -1 & j05 != -1)
-predlm1 <- predict(lm1, newdata = data.frame(r03 = c(1, 5)))
-predlm1[1] - predlm1[2]
-
-bes$proweq <- (bes$r03 - 1) / 4
-bes$proweq[bes$proweq < 0] <- NA
-table(bes$proweq, bes$r03, useNA = "ifany")
-
-lm1a <- lm(ukipvoter ~ proweq, data = bes, subset = j05 != -1)
-
-bes$proimmig <- bes$j05 - 1
-with(bes, table(proimmig, j05))
-lm2 <- lm(ukipvoter ~ proimmig, data = bes, subset = r03 != -1 & j05 != -1)
-predlm2 <- predict(lm2, newdata = data.frame(proimmig = c(0, 1)))
-predlm2[1] - predlm2[2]
-
-lm1b <- lm(ukipvoter ~ proweq + I(proweq^2), data = bes, subset = j05 != -1)
-
-line1 <- .1 - .3 * bes$proweq
-diffs1 <- bes$proweq - line1
-sum(diffs1^2, na.rm = TRUE)
-
-diffslm1a <- residuals(lm1a)
-sum(diffslm1a^2)
-
-myssr <- function(a, b) {
-  line1 <- a + b * bes$proweq
-  diffs1 <- bes$proweq - line1
-  sum(diffs1^2, na.rm = TRUE)
-}
-
-as <- runif(100, -1, 1) ## .145 + seq(-.1,.1,length=100)
-bs <- -.06 + seq(-.1, .1, length = 100)
-inputs <- expand.grid(as, bs)
-
-res <- matrix(nrow = 100 * 100, ncol = 3)
-for (i in 1:nrow(res)) {
-  res[i, 1] <- myssr(inputs[i, 1], inputs[i, 2])
-  res[i, 2] <- inputs[i, 1]
-  res[i, 3] <- inputs[i, 2]
-}
+bes_fem_group <- bes %>%
+    group_by(women_equal) %>%
+    summarize(
+        prop_ukip_vt = mean(ukipvoter), 
+        prop_ukip_pid = mean(ukip_pid)
+    )
+    
+## ukip_fem_plot <- ggplot(data = bes_fem_group, 
+##         aes(x = women_equal, y = prop_ukip_pid)) +
+##     geom_line() + ## using grouped data
+##     geom_point() +
+##     geom_smooth(data=bes,aes(x=women_equal,y=ukip_pid), ## using orig data
+##         method='loess',se=FALSE,span=.8, ## using loess
+##         method.args=list(family="symmetric",deg=1))+
+##     geom_smooth(data=bes,aes(x=women_equal,y=ukip_pid), ## using orig data
+##         method='rlm',se=FALSE)+
+##     geom_jitter(data=bes,aes(x=women_equal,y=ukip_pid),width=.1,height=.1)+
+##     stat_summary(fun="mean",color="red")
+## 
+## print(ukip_fem_plot)
 ```
-
 
