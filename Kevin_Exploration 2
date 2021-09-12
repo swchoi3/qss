@@ -1,0 +1,394 @@
+---
+title: 'Exploration 2: Description of Relationships'
+author: 'Kevin Choi'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+header-includes:
+    - \usepackage[T1]{fontenc}
+    - \usepackage{textcomp}
+    - \usepackage{fontspec}
+    - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+    - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+    - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+    fig_height: 8
+    fig_width: 8
+    latex_engine: xelatex
+    citation_package: biblatex
+    keep_tex: true
+fontsize: 10pt
+geometry: margin=1in
+graphics: yes
+mainfont: "Helvetica"
+bibliography: classbib.bib
+biblio-style: "authoryear-comp,natbib"
+---
+
+<!-- Make this document using library(rmarkdown); render("exploration2.Rmd") -->
+\input{mytexsymbols}
+
+```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
+library(here)
+source(here("rmd_setup.R"))
+library(tidyverse)
+```
+
+"Thanks!" Your friend's voice sounds much calmer than it did when you last
+spoke. "My tasks this week are much less scary than engaging with long-tailed
+and zero-inflated variables like hours spent helping others and groups." When
+you ask what she is up to, she replies,"I do need some help. At a recent
+meeting we had a debate about two different statements. Can you help me by
+providing answers based in data? We got into a shouting matching and only
+stopped when I mentioned the word 'data'. I don't know much
+about data. Can you help? Here are the two statements."
+
+"Support for anti-immigration populists like Trump or the UKIP party arises from anti-feminism more than nativism or or socioeconomic characteristics like income or education."
+
+
+"I managed to find a survey that is supposed to be representative of people in the UK."
+
+```{r readdata}
+library(foreign)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+
+library(readstata13)
+bes <- read.dta("http://jakebowers.org/Data/BES2015/bes_f2f_original_v3.0.dta", convert.factors = FALSE)
+is.data.frame(bes) ##just checking to make sure we have the right object
+dim(bes) ##ok, 2987 respondents to 476 variables.
+```
+"And I found a (codebook)[http://www.jakebowers.org/Data/BES2015/BES_2015_f2f_v3.0_codebook.pdf] too. And have learned enough about R to investigate and even recode some variables. I'm sure I didn't do enough to get rid of missing values, change values to make the variables more meaningful, etc."
+
+What do you think? Between these variables, and the others in the codebook,
+can you provide some evidence for or against those statements? Since this was
+such a heated discussion in our staff meeting, I'd like to see at least three
+ways to describe these two-way relationships including that least squares stuff that people always talk about. I'll need you to justify the weaknesses and
+strengths of the tactics you choose to use. And, especially for the least
+squares description, can you please help me understand why it is called least
+squares and why I should care about least squares versus most squares or least
+something else?  Right now, we just want to describe relationships so please
+don't show me standard errors, $p$-values, confidence intervals, or posterior
+density intervals (this also means that "homoskedasticity" and
+"heteroskedasticity" and "statistical power" and "precision" and "efficiency"
+and "normality" are also words I don't need to hear). I really just want to know
+about **relationships** in the data at hand. Mostly these are represented by the
+**coefficients** of different data models/line fitters/smoothers.
+
+**ANSWER** OK, friend, calm down! Let's take it step-by-step. First, I've notice some errors in the way you recoded the variables. For example, I'd daresay 99% of all analysis treat male/female as a binary factor variable (and 60% of statistics on the Internet are wrong, right? **wink wink nudge nudge**) but you've coded it as "numeric." That's going to affect your results because R will assume it is a numeric variable when it is actually factor (i.e. no actual value in the distance between numeric values); for a variable with only two levels it won't matter too much (I think), but it's a bad habit to get into when you have to later work with data on multiple levels (not to mention the whole Likert scale debate). In addition, choosing how to codify the "don't know" responses is more difficult than it seems. You can't just drop the data since there may very well be a reason they say they don't know; for example, notice that the survey is face-to-face, so people with very strong "politically incorrect" views may have just chosen to instead claim they don't know, and by dropping such individuals we would be biasing our dataset. Thankfully, the number is relatively small (3.6%) but let's practice that now.
+
+```{r checking for patterns in DK answers}
+bes_dk<- as.data.frame(subset(bes, r03==-1))
+
+##Look at responses to A1!! We have a majority of people who cite immigration as the biggest problem. here's something fun. 
+##from : https://towardsdatascience.com/a-light-introduction-to-text-analysis-in-r-ea291a9865a8 & https://towardsdatascience.com/create-a-word-cloud-with-r-bde3e7422e8a 
+library(tm)
+library(SentimentAnalysis)
+library(syuzhet)
+library(wordcloud)
+library(RColorBrewer)
+library(wordcloud2)
+
+dk_a1 <- bes_dk$A1
+docs <- Corpus(VectorSource(dk_a1))
+docs <- docs %>%
+  tm_map(removeNumbers) %>%
+  tm_map(removePunctuation) %>%
+  tm_map(stripWhitespace)
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+dtm <- TermDocumentMatrix(docs) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df <- data.frame(word = names(words),freq=words)
+wordcloud(words = df$word, freq = df$freq, min.freq = 1,           max.words=200, random.order=FALSE, rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+
+##OK, honestly?! That's so cool!!!!  Ahem, anyway, we see that immigration, immigrant, illegal, etc. are the most commonly cited "biggest problem" from our DK group. What about from the general set?
+
+bes_a1<-bes$A1
+docs2 <- Corpus(VectorSource(bes_a1))
+docs2 <- docs2 %>%
+  tm_map(removeNumbers) %>%
+  tm_map(removePunctuation) %>%
+  tm_map(stripWhitespace)
+docs2 <- tm_map(docs2, content_transformer(tolower))
+docs2 <- tm_map(docs2, removeWords, stopwords("english"))
+
+dtm <- TermDocumentMatrix(docs2) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df <- data.frame(word = names(words),freq=words)
+wordcloud(words = df$word, freq = df$freq, min.freq = 1,           max.words=200, random.order=FALSE, rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+
+##Immigration is still the biggest issue for a majority of people even within the general dataset.
+##What about gender?
+bes$female <- ifelse(bes$y09 == 2, "FEMALE", "MALE")
+table(bes$female)
+##we can also have a number if that's your fancy, friend
+bes$female_n <- ifelse(bes$y09 == 2, 1, 2)
+table(bes$female_n)
+##tada
+table(bes_dk$female)
+table(bes$female, bes$r03)
+##hmm.. again, I wouldn't say this is definitive by any means.
+table(bes_dk$r04)
+table(bes_dk$r05)
+prop.table(ftable(bes_dk$u05))
+bes_control <- subset(bes, r03==3)
+prop.table(ftable(bes_control$u05))
+##OK. So we might say that among the DK group for R03, they seem to have lower numbers of participation in politics in general since about 50% were eligible to vote but didn't vote, don't remember who they voted for or refused to answer.
+
+##OK. So basically, we might argue that the people who refused to argue are those who don't participate in general. 
+
+##Some fancier tests. I set any value below 0 as NA to assess MCAR vs. MNAR in "bes2"
+library(prettyR)
+values<- c(-1, -2)
+values
+bes2 <- toNA(bes, values=NA)
+table(bes2$r03) ##not working the way I'd hoped. Something to keep at!
+
+remotes::install_github("njtierney/naniar")
+library(naniar)
+mcar_test(bes_dk) ##doesn't work properly, but theoretically a way to check for MCAR.
+
+##This quick look is incomplete and overly simple, but again, it's best practices to not assume DK responses are automatically invalid. Some research argues that DK is exactly that (respondent doesn't know) and that it is in fact the assumption that the public is well-informed which is incorrect. (Luskin 2011) Others have different opinions on the matter, but all in all it's best to avoid making unnecessary data reduction. (Keep 2019; https://www.benjaminkeep.com/post/when-to-offer-don-t-know-no-opinion-or-not-sure-response-options-on-your-survey; Jouni Kuha, Sarah Butt, Myrsini Katsikatsou & Chris J. Skinner (2018) The Effect of Probing “Don’t Know” Responses on Measurement Quality and Nonresponse in Surveys, Journal of the American Statistical Association, 113:521, 26-40, DOI: 10.1080/01621459.2017.1323640) 
+```
+OK, back to the recoding of the variables. So, let's fix that and some other errors before looking at your statements. 
+```{r recode2}
+bes$female <- ifelse(bes$y09 == 2, "FEMALE", "MALE")
+table(bes$female)
+##we can also have a number if that's your fancy, friend
+bes$female_n <- ifelse(bes$y09 == 2, 1, 2)
+table(bes$female_n)
+##tada
+
+table(bes$r03, useNA = "ifany")
+##OK, "-1" signifies "don't know." We've discussed this in detail before, so let's go ahead and make the (strong) assumption that the missing data is completely at random. We'll leave that code in.
+
+table(bes$y09, exclude = c()) ## Male=1, Female=2 gender (41 of 49 in footer)
+
+table(bes$r03, useNA = "ifany") ##  Support for equality for women (page 29 of 49), search for "R 3"
+table(bes$r03, exclude = c()) ## lower numbers less support for equality for women.
+## Give the variable an easier name to remember and code don't know (DK) answers as missing. I wonder if the DK people oppose equality? Or why they say DK?
+bes$women_equal <- with(bes, ifelse(r03 == -1, NA, r03))
+## Check the recode
+with(bes, table(women_equal, r03, exclude = c()))
+table(bes$Age, useNA = "ifany")
+table(bes$y01, useNA = "ifany") ## Income (37 of 49), higher=higher income bracket
+## Recode negative numbers to be missing
+bes$income <- with(bes, ifelse(y01<0,NA,y01))
+table(bes$j05, useNA = "ifany") ## Immigration (15 of 49)
+table(bes$education, useNA = "ifany") ## based on y 13a
+## Create an education level variable
+bes <- bes %>% mutate(edlevel = case_when(
+  education == 12 ~ 1,
+  education == 10 ~ 2,
+  education == 11 ~ 2,
+  education == 7 ~ 3,
+  education == 8 ~ 3,
+  education == 3 ~ 4,
+  education == 2 ~ 4,
+  education == 1 ~ 5,
+  education == 0 ~ 0,
+  education == 17 ~ 1,
+  education == 15 ~ 1,
+  education == 16 ~ 2,
+  education == 14 ~ 2,
+  education == 13 ~ 3,
+  education == 5 ~ 4,
+  education == 4 ~ 4,
+  education == 18 ~ NA_real_,
+  education == 6 ~ 3,
+  education == 9 ~ 3
+))
+## edlevel 0 "No qualifications" 1 "GCSE D-G" 2 "GCSE A*-C" 3 "A-level" 4 "Undergraduate" 5 "Postgrad" 6"other"
+with(bes, table(education, edlevel, exclude = c()))
+## Convert education level into categories in case that is easier than treating
+## it as a continuous numeric variable.
+bes$edlevelF <- factor(bes$edlevel, labels = c(
+  "No qualifications",
+  "GCSE D-G", "GCSE A*-C", "A-level", "Undergraduate", "Postgrad"
+))
+with(bes, table(edlevel, edlevelF, exclude = c()))
+table(bes$b02, useNA = "ifany") ## Party voted in last election (4 of 49)
+table(bes$b04, useNA = "ifany") ## If you have voted which party would you have voted for
+## 1 if voted or would have voted for ukip
+bes$ukipvoter <- with(bes, as.numeric(ifelse(is.na(b02), b04 == 8, b02 == 7)))
+table(bes$ukipvoter, useNA = "ifany")
+table(bes$d01, useNA = "ifany") # Party ID (11 of 49)
+## UKIP and British National Party are basically the same, I think
+bes$ukip_pid <- as.numeric(bes$d01 %in% c(2, 8))
+with(bes, table(d01, ukip_pid, exclude = c()))
+```
+"Support for anti-immigration populists like Trump or the UKIP party arises from anti-feminism more than nativism or or socioeconomic characteristics like income or education."
+
+**ASSESSING THE QUESTION** By your statements, I assume you are hypothesizing that "anti-feminism" will have a higher effect on support for anti-immigration populists than the effect of nativism or socioeconomic characteristics. First things first. What exactly are you attempting to achieve? It's discouraged to simply a) throw the kitchen sink, or b) just "run a regression" (a term I've noticed methodologists HATE) without knowing what is going on under the hood when doing so and whether it actually fits your purposes. For example, your analysis might be complete enough without having to go to regression techniques (and associated issues to be solved). So, don't jump automatically to regression as your go-to technique. 
+
+**VARIOUS TESTS** When you say "support" I assume you mean "voted for." 
+
+```{r tests}
+##reprinting key variables
+bes$ukipvoter <- with(bes, as.numeric(ifelse(is.na(b02), b04 == 8, b02 == 7)))
+table(bes$ukipvoter, useNA = "no")
+table(bes$d01, useNA="no") # Party ID (11 of 49)
+bes$ukip_pid <- as.numeric(bes$d01 %in% c(2, 8))
+with(bes, table(d01, ukip_pid, exclude = c()))
+##tbl to check partisanship within UKIP v
+with(bes, table(d04, ukip_pid, exclude = c()))
+##Since the dependent variable is "vote/no vote", a linear model is not going to be the most accurate. Instead, we'd want to use a technique like logistic regression. Dependending on the nature and number of IVs, we might use other tests like t-tests, chi-square, variations of ANOVA, etc.
+
+##For practice, testing one variable on the dependent.
+##Fisher's Exact Test for voting UKIP and gender
+fisher.test(table(bes$ukipvoter, bes$female))
+fisher.test(table(bes$ukip_pid, bes$female))
+##What is this "odds ratio" thing? According to Towards Data Science, "The odds ratio tells us how many times more positive cases can happen than negative cases. The question is what positive cases and negative cases mean? The answer depends on the frequency table. Positives represent the pairs that are the same in both variables and negatives represent the pairs that aren’t the same in both variables." The visualization of positive and negative cases can be seen at the following table."
+
+##With the positive odds ratio >1, we can say that men are 1.7 times more likely to vote UKIP or declare for UKIP than women.
+
+##Chi-squared test
+chisq.test(table(bes$ukipvoter, bes$female))
+chisq.test(table(bes$ukip_pid, bes$female))
+##For reference, the Yates' continuity correction kicks in when one of the assumptions of Pearson's chi-squared test is not met; according to Wikipedia (not the best resource, I know, but good in a pinch?) is "In statistics, Yates's correction for continuity (or Yates's chi-squared test) is used in certain situations when testing for independence in a contingency table. It aims at correcting the error introduced by assuming that the discrete probabilities of frequencies in the table can be approximated by a continuous distribution (chi-squared). In some cases, Yates's correction may adjust too far, and so its current use is limited." This was not introduced by choice, but rather as a base option of R. 
+
+##Based on the results, we could say that there is a relationship between voting for UKIP/party ID and gender (i.e. non-random) "for a p-value that is less than or equal to our significance level indicates there is sufficient evidence to conclude that the observed distribution is not the same as the expected distribution; we can conclude that a relationship exists between the categorical variables." (https://statisticsbyjim.com/hypothesis-testing/chi-square-test-independence-example/)
+
+##We can also look at anti-fem ~ UKIP. No Fisher's ET since it's not a 2x2 anymore, but we could still use the chi-squared.
+chisq.test(table(bes$ukipvoter, bes$women_equal))
+chisq.test(table(bes$ukip_pid, bes$women_equal))
+##Wow, okay. Pretty interesting results; there's a very good chance that there is a relationship between the two, though not what kind necessarily.
+chisq.test(table(bes$ukip_pid, bes$edlevelF))
+chisq.test(table(bes$ukipvoter, bes$edlevelF))
+chisq.test(table(bes$ukipvoter, bes$income))
+chisq.test(table(bes$ukip_pid, bes$income))
+##All these variables HAVE SOME RELATIONSHIP WITH THE DEPENDENT VARIABLE. What about with each other??
+library(GGally)
+library(ggplot2)
+
+bes_ct <- subset(bes[,c(477:484)])
+dim(bes_ct)
+##says edLevelF is non-numeric; let's change that. Yes, there are going to be issues, but for the sake of argument?
+levels(bes_ct$edlevelF) <- c("0", "1", "2", "3", "4", "5")
+bes_ct$edlevelF = as.numeric(bes_ct$edlevelF)
+ggcorr(bes_ct)
+
+##Tentatively, there is some correlation between the explanatory variables we want to use in our models. This is something we need to know beforehand otherwise we run into problems with accuracy/validity!
+
+##These are just some examples of other ways we can analyze data and evaluate relationships BEFORE moving to regression analysis! They may not be all-conclusive, but they definitely have a place in preliminary analysis by helping us understand things that might get lost if we threw them and the kitchen sink together.
+```
+
+Ok, phew. We got that out of the way. Let's look quickly at some of the code & concepts you've brought in.
+
+```{r}
+sum_sq_resids <- function(a, b, y, z) {
+  yhat <- a + b * z
+  ehat <- y - yhat
+  thessr <- sum(ehat^2)
+  return(thessr)
+}
+
+small_dat <- dplyr::select(bes,ukipvoter, income, women_equal, edlevel,
+    edlevelF, j05) %>% na.omit()
+## a has to be between 0 and 1, b also should be between 0 and 1.
+## a=mean of ukipvoter when income=0 or proportion of ukipvoter when income=0
+## b=difference in proportion of ukipvoter between income=0 and income=1. (or
+## any 1 unit difference)
+## Is this the least squares solution?
+sum_sq_resids(a = .1, b = .12, y = small_dat$ukipvoter, z = small_dat$income)
+## Or this?
+sum_sq_resids(a = 0, b = .2, y = small_dat$ukipvoter, z = small_dat$income)
+possible_solutions <- expand_grid(a=seq(0,1,.1),b=seq(-1,1,.1))
+library(purrr)
+res <- pmap_dbl(possible_solutions,.f=function(a,b){ sum_sq_resids(a =a, b = b, y = small_dat$ukipvoter, z = small_dat$income) })
+possible_solutions$ssr <- res
+## The lowest sum of squared residuals that we tried:
+## So does this mean that the difference in ukip voting for each unit of the
+## income scale is 0?
+filter(possible_solutions, ssr==min(ssr))
+## Hmmm... maybe there is a better solution. Is a=.1 and b=0 really the
+## **least** one?
+## Lets ask R to find the lowest ssr.
+sum_sq_resids_vec <- function(x, y, z) {
+    # Allowing the coefficients to be a vector
+  yhat <- x[1] + x[2] * z
+  ehat <- y - yhat
+  thessr <- sum(ehat^2)
+  return(thessr)
+}
+## Seems like there is a better solution that we missed.
+res2 <- optim(par=c(0,0),fn=sum_sq_resids_vec,y = small_dat$ukipvoter, z = small_dat$income)
+res2$par
+## smaller than ssr=203
+res2$value
+plot_res <- ggplot(possible_solutions,aes(x=a,y=b,z=ssr))+
+   geom_contour_filled()+
+   geom_point(aes(x=res2$par[1],y=res2$par[2]))
+print(plot_res)
+```
+
+```{r}
+bes_fem_group <- bes %>%
+  group_by(women_equal) %>%
+  summarize(
+    prop_ukip_vt = mean(ukipvoter),
+    prop_ukip_pid = mean(ukip_pid)
+  )
+
+ukip_fem_plot <- ggplot(data = bes_fem_group,
+     aes(x = women_equal, y = prop_ukip_pid)) +
+   geom_line() + ## using grouped data
+     geom_point() +
+     geom_smooth(data=bes,aes(x=women_equal,y=ukip_pid), ## using orig data
+         method='loess',se=FALSE,span=.8, ## using loess
+         method.args=list(family="symmetric",deg=1))+
+     geom_smooth(data=bes,aes(x=women_equal,y=ukip_pid), ## using orig data
+         method='rlm',se=FALSE)+
+     geom_jitter(data=bes,aes(x=women_equal,y=ukip_pid),width=.1,height=.1)+
+     stat_summary(fun="mean",color="red")
+##
+ print(ukip_fem_plot)
+```
+
+
+**I found R commands like `lm`, `loess`, `lmrob` (in the robustbase package), `rlm` (in the MASS package), `rq` ( in the quantreg package) as ways to summarize two dimensional relationships. I'm particularly confused about "least squares". A friend sent me some code that she claims "does least squares" but I'm not even sure what that means or why I should care. I also thought that you could find the least squares solution in one line rather than needing a whole function. **
+
+**LM**: Stands for "linear model", given by the formula $y= mx+b$ where $y$ is the output variable, $m$ is the slope of the line, $b$ is the y-intercept. (Kaplan Chp 7) However, there's more: we have to think about the "residuals", which is "the difference between the model values with the actual response variable data." (Kaplan Chp 7) So, our formula is updated to $y=mx+e$, with $e$ representing the residuals. Another important concept is the sum of squared residuals (also known as residual sum of squares; RSS), or SSR. Sum of squares is a measure of how a data set varies around a central number (like the mean) with the formula $y= Y - \bar{Y}$. The residual sum of squares (different concept!) tells you how much of the dependent variable’s variation your model did not explain. It is the sum of the squared differences between the actual Y and the predicted Y: $\sum e^2$. Least squares is a concept related to all this! The "least squares" is one way we can apply a goodness-of-fit to a model, since the best fit in the least-squares sense minimizes the sum of squared residuals (which we've talked about). The linear, ordinary least squares model is the workhorse of our world, with tweaks here and there (for example to increase power) based on data, needs and wants, and to try and correct weaknesses and limitations of OLS.
+
+Logically, we should ask ourselves why we need robust regressions at all: if OLS works, isn't that enough? Well, besides avoiding a good beating with five-inch thick stats books by the statisticians roving the hallowed halls of academia, robust regressions have numerous advantages. One strong reason to always think about robustness is statistical power [according to Weiss (1982), power put simply is the probability of not making a Type II error (failing to reject a false null hypothesis in favor of a true alternative hypothesis). "Mathematically, power is 1 – beta. The power of a hypothesis test is between 0 and 1; if the power is close to 1, the hypothesis test is very good at detecting a false null hypothesis. Beta is commonly set at 0.2, but may be set by the researchers to be smaller. Power lower than 0.8 would typically be considered too low for most areas of research."]
+Another advantage of robust regressions over OLS, as Wilcox writes, "Yet another practical problem is that OLS has a breakdown point of only 1/n. That is, a single point, properly placed, can cause the OLS estimator to have virtually any value. Not only do unusual y values cause problems, outlying x values, called leverage points, can have an inordinate influence on the estimated slopes and intercept." So, an area of interest is "the problem of finding a regression estimator that guards againstleverage points" (Wilcox 2012), of which some are M-estimators and their variants. The "lmrob", described below, uses one such typed called an MM-estimator.
+
+**LOESS** "locally estimated scatterplot smoothing"
+According to StatDirect,
+"This is a method for fitting a smooth curve between two variables, or fitting a smooth surface between an outcome and up to four predictor variables. The procedure originated as LOWESS (LOcally WEighted Scatter-plot Smoother). Since then it has been extended as a modelling tool because it has some useful statistical properties (Cleveland, 1998). This is a nonparametric method because the linearity assumptions of conventional regression methods have been relaxed. Instead of estimating parameters like m and c in y = mx +c, a nonparametric regression focuses on the fitted curve. The fitted points and their standard errors represent are estimated with respect to the whole curve rather than a particular estimate. So, the overall uncertainty is measured as how well the estimated curve fits the population curve." For more, Berk (2008; p.73) talks about LOWESS in greater detail, providing the formula
+
+$RSS^*(\beta) = (y^*-X^*\beta)^TW^*(y^*-X^*\beta)$ (I recall this formula from the Quant II exploration on matrice regression, I believe.)
+
+So there's a lot of stat-speak there, but the key differences with the linear model are "non-parametric" (whereas the OLS is parametric; non-parametric has its advantages like wider applicability and being more robust due to fewer assumptions but also might have less power than a parametric test), and the presence of weighting. According to Berk, "there is also a robust version of lowess. After the entire fitting process is completed, residuals are computed in the usual way. Weights are constructed from these residuals. Larger residuals are given smaller weights, smaller are given larger .... this continues until the fitted values do not change much or until some predetermined number of iterations is reached." He also notes that whether this technique is applicable is quite case-specific.
+
+
+**LMROB**: According to the help page, "MM-type Estimators for Linear Regression", it computes "fast MM-type estimators for linear models." OK, well, what are MM-type estimators?? Wilcox (2012) writes that MM-type estimators are quite similar to general M estimators (recall the Huber's M-Estimator from last time). It has the highest possible breakdown point, 0.5, and high efficiency under normality. Wilcox writes, " In addition to having excellent theoretical properties, the small-sample efficiency of the MM-estimator appears to compare well with other robust estimators, but like several other robust estimators it can be sensitive to what is called contamination bias... However, even under normality and homoscedasticity, control over the probability of a type I error is poor when n is small... If there is interest in testing hypotheses based on the MM-estimator,currently the best approach appears to be to use the percentile bootstrap method." Other than lmrob, we could also use 'MMreg' which computes Yohai's MM-estimator.
+
+**RLM** Help page states, "Robust Fitting of Linear Models", which "Fit a linear model by robust regression using an M estimator." We've talked about M-estimators above, and hopefully you'll recall our correspondence last time about Huber's M-estimator. The help page says "Fitting is done by iterated re-weighted least squares (IWLS)" which calls to mind the method of LOESS/LOWESS.
+
+**RQ** Quantile regression. According to Towards Data Science, "Unlike regular linear regression which uses the method of least squares to calculate the conditional mean of the target across different values of the features, quantile regression estimates the conditional median of the target. Quantile regression is an extension of linear regression that is used when the conditions of linear regression are not met (i.e., linearity, homoscedasticity, independence, or normality)." (Dye 2020; https://towardsdatascience.com/quantile-regression-ff2343c4a03) 
+
+**PUTTING IT TOGETHER** : 
+First, not all regression techniques are appropriate all the time. It depends on a number of things like sample size, sampling techniques, inclusion of techniques like matching or bootstrapping, etc. Also, the type of data in the dependent variable is also important (something I alluded to earlier). For example, a quick look through forums, discussions, etc. show some measure of disagreement about the conventional wisdom of not using OLS for binary dependent variables; there are some who argue that OLS is fine IF we transform the 0 and 1s into probabilities of 0 and 1 into a Linear Probability Model (LPM), do logistic transformation by getting log-odds from probabilities, and fit that to OLS, others say just use logistic regression (the differences between those two are I'd say are small).
+
+These are two related but different animals (like, say, donkeys and horses); from towards data science (fantastic read: https://towardsdatascience.com/how-are-logistic-regression-ordinary-least-squares-regression-related-1deab32d79f5)
+"Logistic regression is useful for situations where there could be an ability to predict the presence or absence of a characteristic or outcome, based on values of a set of predictor variables. It is similar to a linear regression model but is suited to models where the dependent variable is dichotomous. It’s coefficients can be used to estimate odd ratios for each of the independent variables in the model. It is applicable to a broader range of research situations than discriminant analysis. Logistic Regression on the other hand is used to ascertain the probability of an event, this event is captured in binary format, i.e. 0 or 1." What's interesting is that BOTH are linear models, but just measuring different aspects. Logistic regression estimates the log odds as a linear combination of the independent variables, whereas OLS coefficients represent the mean change in the response variable for one unit of change in the predictor variable while holding other predictors in the model constant. Also, in terms of error, OLS requires errors to be normally distributed while logistic regression doesn't (GLMs, in general, maybe??)
+
+Alright, it's good that we got that out of the way, but it's also important to know that's barely a scratch on a scratch on a scratch of regression techniques!
+
+
+
+
+
+
+
+
+
+
