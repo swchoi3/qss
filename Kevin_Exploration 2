@@ -383,8 +383,31 @@ These are two related but different animals (like, say, donkeys and horses); fro
 
 Alright, it's good that we got that out of the way, but it's also important to know that's barely a scratch on a scratch on a scratch of regression techniques!
 
+So, with all those caveats out of the way, let's test some models.
 
+```{r different models}
+##OLS 
+lm1 <- lm(ukipvoter~women_equal+income+edlevelF, data=bes)
+summary(lm1)
+plot(lm1)
+##LOESS
+loess1 <- loess(ukipvoter~women_equal+income+edlevel, data=bes)
+summary(loess1)
 
+##RLM
+
+rlm1 <- rlm(ukipvoter~women_equal+income+edlevelF, data=bes)
+summary(rlm1)
+##Interestingly, we see no relationships using this method.
+
+##Logistic Regression
+glm1 <- glm(ukipvoter~women_equal+income+edlevelF,family=binomial(link="logit"), data=bes)
+summary(glm1)
+##Quick note on "Z-value" :  a z-score is a very useful statistic because it (a) allows us to calculate the probability of a score occurring within our normal distribution and (b) enables us to compare two scores that are from different normal distributions. (https://statistics.laerd.com/statistical-guides/standard-score.php)
+
+##We don't see a strong relationship between anti-feminism and ukip voting, but we do observe a relationship between higher levels of education and voting ukip as well as a very tentative relationship for income.
+
+```
 
 
 
