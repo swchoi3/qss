@@ -121,7 +121,7 @@ winsor.mean(hlp_vec)
 library(robustHD)
 mean(winsorize(hlp_vec))
 
-onestepMest <- function(x) {
+one_step_M_est <- function(x) {
   ## Following Section 2.1 in http://www.psychology.mcmaster.ca/bennett/boot09/rt2.pdf
   madn <- mad(x, constant = 1.4826) ## 1/1.4826 = .6745
   M <- (abs(x - median(x)) / madn) > 1.28
