@@ -73,7 +73,7 @@ with(bes, table(women_equal, r03, exclude = c()))
 table(bes$Age, useNA = "ifany")
 table(bes$y01, useNA = "ifany") ## Income (37 of 49), higher=higher income bracket
 ## Recode negative numbers to be missing
-bes$income <- with(bes, ifelse(y01<0,NA,y01))
+bes$income <- with(bes, ifelse(y01 < 0, NA, y01))
 table(bes$j05, useNA = "ifany") ## Immigration (15 of 49)
 table(bes$education, useNA = "ifany") ## based on y 13a
 ## Create an education level variable
@@ -114,7 +114,7 @@ bes$ukipvoter <- with(bes, as.numeric(ifelse(is.na(b02), b04 == 8, b02 == 7)))
 table(bes$ukipvoter, useNA = "ifany")
 table(bes$d01, useNA = "ifany") # Party ID (11 of 49)
 ## UKIP and British National Party are basically the same, I think
-bes$ukip_pid <- as.numeric(bes$d01 %in% c(2, 8))
+bes$ukip_pid <- as.numeric(bes$d01 %in% c(9, 8))
 with(bes, table(d01, ukip_pid, exclude = c()))
 ```
 
@@ -153,8 +153,10 @@ sum_sq_resids <- function(a, b, y, z) {
   return(thessr)
 }
 
-small_dat <- dplyr::select(bes,ukipvoter, income, women_equal, edlevel,
-    edlevelF, j05) %>% na.omit()
+small_dat <- dplyr::select(
+  bes, ukipvoter, income, women_equal, edlevel,
+  edlevelF, j05
+) %>% na.omit()
 
 ## a has to be between 0 and 1, b also should be between 0 and 1.
 ## a=mean of ukipvoter when income=0 or proportion of ukipvoter when income=0
@@ -166,25 +168,27 @@ sum_sq_resids(a = .1, b = .12, y = small_dat$ukipvoter, z = small_dat$income)
 ## Or this?
 sum_sq_resids(a = 0, b = .2, y = small_dat$ukipvoter, z = small_dat$income)
 
-possible_solutions <- expand_grid(a=seq(0,1,.1),b=seq(-1,1,.1))
+possible_solutions <- expand_grid(a = seq(0, 1, .1), b = seq(-1, 1, .1))
 
 library(purrr)
 
-res <- pmap_dbl(possible_solutions,.f=function(a,b){ sum_sq_resids(a =a, b = b, y = small_dat$ukipvoter, z = small_dat$income) })
+res <- pmap_dbl(possible_solutions, .f = function(a, b) {
+  sum_sq_resids(a = a, b = b, y = small_dat$ukipvoter, z = small_dat$income)
+})
 
 possible_solutions$ssr <- res
 
 ## The lowest sum of squared residuals that we tried:
 ## So does this mean that the difference in ukip voting for each unit of the
 ## income scale is 0?
-filter(possible_solutions, ssr==min(ssr))
+filter(possible_solutions, ssr == min(ssr))
 
 ## Hmmm... maybe there is a better solution. Is a=.1 and b=0 really the
 ## **least** one?
 
 ## Lets ask R to find the lowest ssr.
 sum_sq_resids_vec <- function(x, y, z) {
-    # Allowing the coefficients to be a vector
+  # Allowing the coefficients to be a vector
   yhat <- x[1] + x[2] * z
   ehat <- y - yhat
   thessr <- sum(ehat^2)
@@ -193,16 +197,19 @@ sum_sq_resids_vec <- function(x, y, z) {
 
 
 ## Seems like there is a better solution that we missed.
-res2 <- optim(par=c(0,0),fn=sum_sq_resids_vec,y = small_dat$ukipvoter, z = small_dat$income)
+res2 <- optim(par = c(0, 0), fn = sum_sq_resids_vec, y = small_dat$ukipvoter, z = small_dat$income, control=list(trace=2) )
 res2$par
 ## smaller than ssr=203
 res2$value
 
-plot_res <- ggplot(possible_solutions,aes(x=a,y=b,z=ssr))+
-   geom_contour_filled()+
-   geom_point(aes(x=res2$par[1],y=res2$par[2]))
-print(plot_res)
+res2a <- optim(par = c(100, 100), fn = sum_sq_resids_vec, y = small_dat$ukipvoter, z = small_dat$income,control=list(trace=2)) 
+res2a$par
+res2a$value
 
+plot_res <- ggplot(possible_solutions, aes(x = a, y = b, z = ssr)) +
+  geom_contour_filled() +
+  geom_point(aes(x = res2$par[1], y = res2$par[2]))
+print(plot_res)
 ```
 
 
