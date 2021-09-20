@@ -1,0 +1,473 @@
+---
+title: 'Exploration 3: Description of Relationships II'
+author: 'Jaeyoung Lee'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+header-includes:
+    - \usepackage[T1]{fontenc}
+    - \usepackage{textcomp}
+    - \usepackage{fontspec}
+    - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+    - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+    - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+    fig_height: 8
+    fig_width: 8
+    latex_engine: xelatex
+    citation_package: biblatex
+    keep_tex: true
+fontsize: 10pt
+geometry: margin=1in
+graphics: yes
+mainfont: "Helvetica"
+bibliography: classbib.bib
+biblio-style: "authoryear-comp,natbib"
+---
+
+<!-- Make this document using library(rmarkdown); render("exploration2.Rmd") -->
+\input{mytexsymbols}
+
+```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
+library(here)
+source(here("rmd_setup.R"))
+library(tidyverse)
+```
+
+This week we are using [Pippa Norris's amazing
+data at the level of the country](https://www.pippanorris.com/data). 
+
+```{r}
+library(readstata13)
+dat <- read.dta13("https://www.dropbox.com/s/huhqag5rudwtbno/Democracy%20Cross-National%20Data%20V4.1%2009092015.dta?dl=1")
+## Make sure each row is a state and there are no duplicates
+stopifnot(length(unique(dat$Nation)) == nrow(dat))
+stopifnot(all(table(dat$Nation) == 1))
+
+```
+
+1. Choose one continuous variable as an "outcome". I'm calling it $y_i$ for country
+$i=1 \ldots 195$ in this data set. This variable should have at least 4 values
+and hopefully more. Please describe this variable (you can use words,
+tables, single numbers, etc.. to describe this variable alone, in
+one-dimension).
+
+**ANSWER**: What are the variables available?
+
+```{r Descriptive statistics of outcome variable: hdi}
+head(dat)
+dim(dat)
+##Whew lots of columns!! We should look at the codebook to make sense of it.
+
+#JEK: The outcome variable we chose is the Human Development Index(HDI). HDI is calculated and released by United Nation Development Programme, and it is a composite index of life expectancy, education, and per capita income indicator. The high HDI indicates that the nations of country will be likely has long lifespan, the higher education, and the high GNI per capita. Of course, this is a continuous variable, the range of HDI is from 0 to 1. 
+
+#In this exploration we chose HDI from **1985** as a outcome variable, and FHStand from **1984** as an explanatory variable. Freedom House Stand refers to a country's level of freedom measured in a given year over three categories of various questions: Electoral Process, Political Pluralism and Participation, and Functioning of Government. As a result, a country could be categorized as free, partly free and not free. Therefore, we are measuring the relationship between the freedom levels and the humanitarian development index levels. 
+
+#Why do we set a year of time gap?
+#The reason why we chose variables with a year gap, is because we wanted to address lagged effect. Since our explanatory variable(Freedom house index) and outcome variable(HDI) cannot change simultaneously(in a same year), so we thought it would be more appropriate to consider a year of time gap between the IV and DV. 
+#Now, we will try to describe the outcome variable.
+
+#Before check basic information of the variable, I want to replicate and rename the variable name.
+dat$hdi <- dat$HDI1985
+
+#Min, Max, Mean, Median
+summary(dat$hdi, na.rm = TRUE)
+#with density plot, check distribution of variable
+d <- density(dat$hdi, na.rm = TRUE)
+plot(d)
+#Standard deviation of the variable
+sd(dat$hdi, na.rm = TRUE)
+
+```
+2. Choose another variable which should cause the outcome according to some theory
+or another. I'm calling it $z_i$ (again were $i$ indexes country). (If you can
+state the theory, great. If not, then just an intuition about why $z_i
+\rightarrow y_i$ will work. It is ok if you yourself don't think $z_i$ should
+relate to $y_i$, but someone should. There should be something at stake in
+learning about this relationship.) This variable, which I'll call the
+"explanatory variable", should also be continuous (i.e. at least 4 unique
+values). Please describe this variable (you can use words,
+tables, single numbers, etc.. to describe this variable alone, in
+one-dimension).
+
+We found a cool seminal work! Based on Shrabani and Zhang(2012) "The Impact of the Interaction Between Economic Growth and Democracy on Human Development: Cross-National Analysis."(https://ro.ecu.edu.au/cgi/viewcontent.cgi?article=1175&context=ecuworks2012) Our group will going to re-examine the relationship between the democracy and hdi with the instrument effect of economic development. 
+
+```{r Descriptive statistics of explanatory variable: Democracy}
+
+##JEK: We found a cool seminal work. Based on Shrabani and Zhang(2012) "The Impact of the Interaction Between Economic Growth and Democracy on Human Development: Cross-National Analysis."(https://ro.ecu.edu.au/cgi/viewcontent.cgi?article=1175&context=ecuworks2012) Our group will going to re-examine the relationship between the democracy measured over Freedom House Stand variable from the data set and hdi with the instrument effect of economic development. 
+#and as we mentioned above, we chose explanatory variable with a year before(1984) than the outcome variable(1985)
+
+#Before check basic information of the variable, we want to replicate and rename the variable name agian.
+dat$demo <- dat$FHStand1984
+
+#Min, Max, Mean, Median
+summary(dat$demo, na.rm = TRUE)
+#with density plot, check distribution of variable
+d_demo <- density(dat$demo, na.rm = TRUE)
+plot(d_demo)
+#Standard deviation of the variable
+sd(dat$demo, na.rm = TRUE)
+```
+
+
+3. Please describe the relationship between $y_i$ and $z_i$ using both graphs and
+at least two global linear smoothers (FYI least squares is a global linear
+smoother). Explain why you made the choices you made. (For example, if you
+considered a third and fourth approach to linear description, explain why you
+didn't use those approaches and instead chose the ones that you did. You can use
+least squares of course, or not. As you see fit given the data.) Notice that
+these are all the countries of the world: the whole population of countries. Not
+a sample.
+
+```{r Relationship between y_i ~ z_i}
+
+# 1.Basic OLS regression
+ols <- lm(hdi ~ demo, data = dat)
+summary(ols)
+
+library(ggplot2)
+yhat <- ols$fitted
+ggplot(dat, aes(x = demo, y = hdi)) +
+  geom_point()+
+  geom_smooth(method=lm)
+
+##JEK: The coefficient value of demo variable is 0.004 and it is higher than 0. It indicates that there is a positive relationship(when x incereases, y increases too) between our explanatory variable and outcome variable. So, we can say, countries with democratic regime will likely to achieve high human development. 
+
+# 2.Robust Linear Regression
+library(MASS)
+robust <- rlm(hdi ~ demo, data = dat)
+summary(robust)
+
+ggplot(dat, aes(x = demo, y = hdi)) +
+  geom_point()+
+  geom_smooth(method=rlm)
+
+##JEK: After conducting a robust regression model that can weighs more related cases and outliers, our regression result is same with normal linear regression. 
+  
+# 3.LMROB
+lmrob_jek <- lmrob(hdi ~ demo, data = dat)
+summary(lm_rob_jek)
+
+ggplot(dat, aes(x= demo, y=hdi)) + geom_point() + geom_smooth(method = lmrob)
+  
+## JEK: As we can see in the plots, there is a positive relationship between the two variables. Since "lm" function is the most basic way to see the fitted linear regressions comparing it with "rlm" and "lmrob" results which specifically deal with the effects of outlier by re-weighting the least squares while fitting the model into the regression could give us a better idea. 
+
+
+# 4. Fixed Effect model
+fixed <- lm(hdi ~ demo +factor(Nation), data=dat)
+summary(fixed)
+
+#Jaeyoung : I want to apply fixed effect model, since our unit is different countries. I think the errors should be fixed in each country, not the whole group of countries. But it doesn't work. Is fixed effect model can only be applied for the panel data?
+```
+
+```{r Multicollinearity}
+
+# What is multicollinearity?
+# JEK: Multicollinearity indicates when there is a high inter-correlation exist among two or more independent variables in a regression model.
+
+# Why do we want to check muliticollinearity?
+# It is widely believed that democratic countries are more likely to acheive economical development. Though we are not sure about the causality, it seems there is at least correlation exist between the two variables. So, we want to check whether there is a muliticollinearity between our explanatory variables.
+
+install.packages('car')
+library(car)
+
+#to check vif, first we need regression model.Usually, the threshold of vif is 10 or 5.
+collinearity <- lm(hdi ~ demo + gdppc, data = dat)
+summary(collinearity)
+
+vif(collinearity)
+
+#wow. vif of democracy and gdppc are  1.2. So, we can conclude that there is no multicollinerity between out explanatory variables.
+
+#But... still it doesn't sounds correct for me. There are plenty of literatures show relationship between democracy and economic development. 
+
+```
+
+4. Please also describe this relationship using a non-linear, local smoother.
+Please use 10-fold cross-validation to choose the tuning parameter(s) for this
+smoother. Explain in your own words what cross-validation is and why one would
+use it to choose tuning parameters in this case or in general.
+
+
+```{r Non-linear local smoother}
+
+##JEK: Cross-validation is used to evaluate the original sample in k-fold (10-fold in this case) parts to train the data. The data is randomly partitioned into 10(k) equal parts; one of the sub-samples are put aside as the validation and tested data each time, 9 (k-1) parts are used to train the data (Training the data is another sub-concept to understand. It is used in AI learning mostly. Machines learn from the data, explore the algorithms of relationships, evaluate the decisions etc. The better the data is trained, the better the model performs). This process of validation is repeated for each part of the data-- k times, each time one of the parts being the validation data. Therefore, we gather 10 results from each of these procedures and we can average them or combine them.
+
+##JEK: While tuning parameters we aim to find the best set of parameters to maximize the accuracy of the model. Cross-validation is a strong tool to understand and work our data better because we use all the data at hand for testing and training. Also due to the same reason, we get more metrics and information about algorithms of our data. Lastly,  it is a robust model of predicting accuracy, so it could be a preferred method to find the parameters of a data. 
+
+## Some examples of a tidy approach to cross-validation here using loess for my
+## local non-parametric smoother.
+## There are many other approaches online. Feel free to use them 
+## if you find them easier to understand.
+
+library(modelr)
+small_dat <- select(dat, Nation, Politystand2014, CBINDEX)
+## remove some labels and such arriving from stata from the small data
+names(attributes(small_dat))
+attr(small_dat, "expansion.fields") <- NULL
+attr(small_dat, "data.label") <- NULL
+attr(small_dat, "val.labels") <- NULL
+attr(small_dat, "var.labels") <- NULL
+attr(small_dat, "label.table") <- NULL
+attr(small_dat, "formats") <- NULL
+attr(small_dat, "types") <- NULL
+
+
+#Make subset data that only include variables we wanted to use. 
+subset <- dplyr::select(dat, hdi, demo)
+names(attributes(subset))
+attr(subset, "expansion.fields") <- NULL
+attr(subset, "data.label") <- NULL
+attr(subset, "val.labels") <- NULL
+attr(subset, "var.labels") <- NULL
+attr(subset, "label.table") <- NULL
+attr(subset, "formats") <- NULL
+attr(subset, "types") <- NULL
+
+
+## This looks promising: https://modelr.tidyverse.org/reference/crossv_mc.html
+## https://drsimonj.svbtle.com/k-fold-cross-validation-with-modelr-and-broom
+## https://www.tmwr.org/software-modeling.html
+
+## library(tidymodels) ## this looked great but wasn't sure about how to apply
+## it with loess
+## cv1 <- vfold_cv(small_dat,v=10)
+cv1 <- vfold_cv(subset, v=10)
+
+install.packages("tidymodels")
+library(tidymodels)
+
+
+try_span <- function(s, f, cvobj)
+  ## s is a span (see the loess help page)
+  ## f is the fold number (an integer)
+  ## cvobj is an object from the crossv_kfold() function
+  train_idx <- cvobj$train[[f]][["idx"]]
+  train_dat <- cvobj$train[[f]][["data"]][train_idx, ]
+  test_idx <- cvobj$test[[f]][["idx"]]
+  test_dat <- cvobj$test[[f]][["data"]][test_idx, ]
+  ## setting deg=1 and family="symmetric" but those could change
+  ## Hard coding in the y~x formula variables here for ease.
+res <- loess(Politystand2014 ~ CBINDEX,
+    span = s, deg = 1,
+    family = "symmetric",
+    data = train_dat)
+
+try_span <- function(s, f, cvobj) {
+  train_idx <- cvobj$train[[f]][["idx"]]
+  train_dat <- cvobj$train[[f]][["data"]][train_idx, ]
+  test_idx <- cvobj$test[[f]][["idx"]]
+  test_dat <- cvobj$test[[f]][["data"]][test_idx, ]
+  
+res_jek <- loess(hdi ~ demo,
+   span = s, deg = 1,
+   family = "symmetric",
+   data = subset )
+
+
+## Predict onto the test data
+pred_test <- predict(res, newdata = test_dat)
+  ## How well did this approach predict the actual test data outcomes.
+  resids <- test_dat$Politystand2014 - pred_test
+  resids_jek <- test_dat$hei - pred_test
+  
+  ## see also broom::augment(res,newdata=test_dat)
+  ## see also modelr::rmse(res,data=test_dat)
+  ## Calculate something very close to sum(resids^2) (mean(resids^2) =
+  ## sum(resids^2)/length(resids).
+  my_rmse <- sqrt(mean(resids^2, na.rm = TRUE))
+  return(my_rmse)
+}
+
+set.seed(12355)
+## could do this multiple time times too for different seeds
+cv1 <- crossv_kfold(small_dat, 10)
+cv1 <- crossv_kfold(subset, 10)
+
+
+## Check out span=2/3
+thermse_for_thespan <- sapply(seq_along(cv1$.id), function(thefold) {
+  try_span(s = 2 / 3, f = thefold, cvobj = cv1)
+})
+thermse_for_thespan
+mean(thermse_for_thespan)
+
+## Make into another function
+
+avg_rmse <- function(the_span) {
+  thermse_for_thespan <- sapply(seq_along(cv1$.id), function(thefold) {
+    try_span(s = the_span, f = thefold, cvobj = cv1)
+  })
+  thermse_for_thespan
+  mean(thermse_for_thespan)
+}
+
+avg_rmse(2/3)
+
+## What is the smallest rmse?
+### Grid search?
+some_s <- seq(.1, .9, .1)
+res1 <- sapply(some_s,function(s){ avg_rmse(s) })
+res1_df <- data.frame(the_rmse=res1,span=some_s)
+filter(res1_df,the_rmse==min(the_rmse))
+
+## Optimization?
+res2 <- optim(par=c(.5), fn=avg_rmse, method="Brent", lower=.05, upper=.95)
+res2$par
+res2$value
+
+## Fit with chosen tuning parameter:
+## final_res <- loess(Politystand2014 ~ CBINDEX,
+##     span = res2$par, deg = 1,
+##     family = "symmetric",
+##     data = dat)
+## summary(final_res)
+## preddat <- broom::augment(final_res)
+## head(preddat)
+
+finalres_jek <- loess(hdi ~ demo,
+                      span = res2$par, degree = 1,
+                      family = "symmetric",
+                      data = dat)
+summary(finalres_jek)
+preddat <- broom::augment(finalres_jek)
+head(preddat)
+
+
+library(robustbase)
+
+g <- ggplot(data=dat, aes(x=CBINDEX,y=Politystand2014))+
+    geom_point()+
+    stat_smooth(method="loess",span=res2$par,method.args=list(deg = 1, family = "symmetric"),se=FALSE,color="black") +
+    stat_smooth(method="loess",span=res2$par,method.args=list(deg = 2, family = "symmetric"),se=FALSE, col="green") +
+    stat_smooth(method="lm",se=FALSE,color="blue") +
+    stat_smooth(method="lmrob",se=FALSE,color="orange",method.args=list(setting="KS2014"))
+
+print(g)
+
+
+##JEK: install.packages("caret")
+library("caret")
+set.seed(123)
+train.control <- trainControl(method= "cv", number = 10)
+model_training <- train(HDI1985~., data = dat, na.action = na.fail, trControl= train.control)
+
+##JEK: This function could actually be an easy way to work on this, however, NA problem is hard to resolve. If you try to remove the NAs first, then you encounter several length-related errors. But still something to think about. 
+#JEK: After conducting these ways of 10-fold cross validation, we got a regression graph. Although we are not really sure about how to interpret this output in detail, after a quick research it seems like the under-fitting models, where the model is not complicated enough to account for the data properly. Is this really the case?
+```
+
+5. Choose another variable that should also relate to $y_i$ and perhaps to $z_i$.
+This variable, which I'll call it $x_i$, should have between 2 and 4 categories.
+It could be ordinal or just categorical. Please ensure that R understands this
+variable as a factor variable. You may need to create this variable yourself,
+for example, if you want to convert something like the Policy Standardized Score into
+categories. Or if you just want to take a variable that has few categories and
+convert it into a factor using `factor()` or `as.factor()`. Please describe this variable (you can use words,
+tables, single numbers, etc.. to describe this variable alone, in
+one-dimension).
+
+
+```{r instrumental variable}
+
+# JEK: For the x_i, we would like to use GDP Per capita(GDPPC1984). According to Shrabani and Zhang, "democracy enhances human development in any level of economic development. However, economic growth increases human development only in developing countries". So, based on this seminal work, we are using GDP per capita as a instrumental variable.  
+
+#rename the variable
+dat$gdppc <- dat$GDPPC1984
+
+#change variable type (continuous -> categorical)
+d_gdppc <- density(dat$gdppc, na.rm = TRUE)
+plot(d_gdppc)
+summary(dat$gdppc)
+
+dat$gdppc_real <- ifelse(dat$gdppc < 1500, 0,
+                    ifelse(dat$gdppc < 18000, 1,
+                           ifelse(dat$gdppc < 100000, 2,)))
+table(dat$gdppc_real)
+dat$gdppc_real <- as.factor(dat$gdppc_real)
+
+summary(dat$gdppc_real, useNA = "ifany")
+
+##JEK: Here we looked at the distribution and details of the variable of GDPPC1984. Then we recoded the values of GDPs of 1984; those below 100.000 are 2, below 18000 are 1 and those below 1500 are 0. Thus turning into a categorical variable with 3 categories and a factor variable. 
+```
+
+
+6. Please describe the relationship between this variable and $y_i$ using least
+squares. This relationship will probably involve `lm()` or
+`estimatr::lm_robust()` to take the categorical variable can convert it into a
+series of indicator variables with 1="in category" and 0="not in category".
+Recall that the constant in such a summary is the mean outcome for the excluded
+category (either least squares command will exclude one of the categories) and
+that the other coefficients are the differences between the mean outcomes of the
+excluded category and each other category.
+
+```{r }
+#make dummy variable
+dat$gdppc_under <- ifelse(dat$gdppc_real == 0, 1, 0)
+dat$gdppc_developing <- ifelse(dat$gdppc_real == 1, 1, 0)
+dat$gdppc_developed <- ifelse(dat$gdppc_real == 2, 1, 0)
+
+##JEK: After putting these variables into dummy variables we used "lm" and "rlm" functions to understand the relationship between the two. 
+
+#relationship between y_i ~ x_i
+xy1 <- lm(hdi ~ gdppc_under + gdppc_developing, data = dat)
+xy1
+##JEK: in this model our reference group is economically developed country. 
+##JEK: the coefficient values of under == -0.4494 and developing ==-0.1975.
+##JEK: So, we can say "compare to economically developed countries, it is likely that underdeveloped countries are achieved lower human development" Also, "compare to economically developed countries, it is likely that developing countries are achieved lower human development". Although, underdeveloped countries shows more stiff intercept than the developing countries, we cannot directly compare underdeveloped countries and developing countries because the reference group was developed countries.
+
+xy2 <- lm(hdi ~ gdppc_under + gdppc_developed, data = dat)
+xy2
+
+##JEK: to compare underdevelped countries and developing countries, we have to switch the reference group. So, in this case, the reference group is developing countries.
+##JEK: It shows us that compare to economically developing countris, it is likely that underdeveloped countries achieved less human development. Also, compare to economically developing countries, it is likely that developed countries achieved high human development. 
+
+xy3 <- lm(hdi ~ gdppc_developing + gdppc_developed, data = dat)
+xy3
+
+#robust model
+xy_robust <- rlm(hdi ~ gdppc_under + gdppc_developing, data = dat)
+xy_robust
+## To check the robustness of our model, we applied rlm and it shows the same results as lm.
+
+xy_robust2 <- rlm(hdi ~ gdppc_under + gdppc_developed, data = dat)
+xy_robust2
+## This also shows the same results as lm.
+
+
+```
+
+
+7. Please also describe the relationship between $y_i$ and $z_i$ conditional on
+$x_i$. That is, if `x` is a factor variable and `y` and `z` are numeric variable
+that are (more or less) continuous, fit and interpret the coefficients (and/or
+predictions) from a model using the formula `y~z*x` (where the `*` creates an
+"interaction term" between `z` and `x`. Feel free to use plots to make this
+interpretation in addition to the coefficients.
+<!--Maybe see:  https://grantmcdermott.com/interaction-effects/ -->
+<!-- https://thomasleeper.com/margins/reference/margins.html -->
+
+
+```{r, interaction term}
+
+install.packages("sjPlot")
+library(sjPlot)
+library(sjmisc)
+library(ggplot2)
+theme_set(theme_sjplot())
+
+#Democracy -> HDI
+interaction <- lm(hdi ~ demo*gdppc_real, data = dat)
+interaction
+
+plot_int <- plot_model(interaction, type = "pred", terms = c("demo", "gdppc_real"))
+plot_int
+
+
+```
+
+
+I am not looking for discussion of statistical inference in this exploration.
+Just figuring out more or less complicated descriptions. 
+
+# References
