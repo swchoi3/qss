@@ -1,0 +1,343 @@
+---
+title: 'Exploration 4: Description of Relationships III: Categorical Variables
+and Tables'
+author: 'Jake Bowers'
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+header-includes:
+    - \usepackage[T1]{fontenc}
+    - \usepackage{textcomp}
+    - \usepackage{fontspec}
+    - \newfontfamily\unicodefont[Ligatures=TeX]{TeX Gyre Heros}
+    - \newfontfamily\grouptwofont[Ligatures=TeX]{Source Code Pro}
+    - \newfontfamily\groupthreefont[Ligatures=TeX]{Courier}
+output:
+  pdf_document:
+    number_sections: true
+    fig_caption: yes
+    fig_height: 8
+    fig_width: 8
+    latex_engine: xelatex
+    citation_package: biblatex
+    keep_tex: true
+fontsize: 10pt
+geometry: margin=1in
+graphics: yes
+mainfont: "Helvetica"
+bibliography: classbib.bib
+biblio-style: "authoryear-comp,natbib"
+---
+
+<!-- Make this document using library(rmarkdown); render("exploration2.Rmd") -->
+\input{mytexsymbols}
+
+```{r setup, echo=FALSE, results=FALSE, include=FALSE, cache=FALSE}
+library(here)
+library(tidyverse)
+```
+
+
+This week we continus using [Pippa Norris's amazing data at the level of the
+country](https://www.pippanorris.com/data) which is called the Democracy
+Cross-National Data, Release 4.0 Fall 2015.  
+
+.
+
+```{r}
+library(readstata13)
+dat <- read.dta13("https://www.dropbox.com/s/huhqag5rudwtbno/Democracy%20Cross-National%20Data%20V4.1%2009092015.dta?dl=1",
+generate.factors=TRUE)
+## Make sure each row is a state and there are no duplicates
+stopifnot(length(unique(dat$Nation)) == nrow(dat))
+stopifnot(all(table(dat$Nation) == 1))
+```
+
+
+1. Choose one binary variable as an "outcome". I'm calling it $y_i$ for country
+   $i=1 \ldots 195$ in this data set. This variable should have 2 values. I
+   recommend coding this variable so that `0` is one value and `1` is the other.
+   Please describe this variable (you can use words, tables, single numbers,
+   etc.. to describe this variable alone, in one-dimension). What do these
+   descriptions mean in substantive terms about countries? (At least as of
+   2015?)
+
+**KEVIN**: The outcome variable I chose is "DD_democracy" from the dataset. According to the codebook the variable is coded based on whether a particular country is or is not a democracy according to Cheibub 2009.  
+
+```{r kev var1}
+library(tidyr)
+library(ggplot2)
+library(cowplot)
+library(xtable)
+
+dat$dddem <- dat$DD_democracy
+levels(dat$dddem) <- c(0,1) ##changing the variable labels to numbers
+levels(dat$dddem)
+dat$dddem_f <- as.factor(dat$dddem)
+##fun with tables
+ftable(dat$dddem_f)
+prop.table(ftable(dat$dddem_f)) ##in 2009, we see that roughly 61.2% of countries are considered democracies.
+
+p1 <- ggplot(data=subset(dat, !is.na(dddem_f)), aes(x=dddem_f)) + geom_bar() + labs(title="Cheibub Classification of Democracy (2009)", x="Democracy (Binary)")
+```
+All this data really tells us is that the author of the paper looked at several different factors and variables, created a framework to ascertain whether or not a country could be called "democratic" and coded it as such. Without further diving into the more fine-grained details, it's difficult to say much more than that. But, of course, where's the fun in stopping there?
+
+```{r dive into outcome v}
+library(forcats)
+library(hrbrthemes)
+library(viridis)
+
+
+
+##Fun with graphs
+summary(dat$ICRGStand2007) ##variable on quality of governance on 100-pt scale
+b1 <- ggplot(data=subset(dat, !is.na(ICRGStand2007)), aes(x=dddem_f, y=ICRGStand2007, fill=dddem_f)) + geom_violin() + labs(y="ICRG Quality of Governance", x="Democracy")
+b2 <- ggplot(data=subset(dat, !is.na(HDI2005)), aes(x=dddem_f, y=HDI2005, fill=dddem_f)) + geom_violin() + labs(y="HDI (2005)", x="Democracy")
+b3 <-  ggplot(data=subset(dat, !is.na(dddem_f)), aes(x=dddem_f, y=WGI_effect2007, fill=dddem_f)) + geom_violin() + labs(y="WGI Gov. Effectiveness 2007", x="Democracy")
+b4 <- ggplot(data=subset(dat, !is.na(dddem_f)), aes(x=dddem_f, y=WGI_regul2007, fill=dddem_f)) + geom_violin() + labs(y="WGI Regulatory Effectiveness 2007", x="Democracy")
+b5 <- ggplot(data=subset(dat, !is.na(dddem_f)), aes(x=dddem_f, y=WGI_law2007, fill=dddem_f)) + geom_violin() + labs(y="WGI Rule of Law 2007", x="Democracy")
+b6 <- ggplot(data=subset(dat, !is.na(dddem_f)), aes(x=dddem_f, y=WGI_corrup2007, fill=dddem_f)) + geom_violin() + labs(y="WGI Control of Corruption 2007", x="Democracy")
+plot_grid(b1, b2, b3, nrow=1, ncol=3)
+plot_grid(b4, b5, b6, nrow=1, ncol=3)
+
+##Components of Gov. 
+bb1 <- ggplot(data=subset(dat, !is.na(DD_exselec)), aes(x=DD_exselec, fill=dddem_f)) + geom_bar(position="stack")+ labs(title="Executive Selection Process", x="Executive Selection", fill="Democracy")
+bb2 <- ggplot(data=subset(dat, !is.na(DD_closed)), aes(x=DD_closed, fill=dddem_f)) + geom_bar(position="stack")+ labs(title="Status of Legislature", x="Status of Legislature", fill="Democracy")
+
+
+
+##We see that democratic countries generally seem to have higher government effectiveness; it could be that democracies have inherent qualities which make them more effective, or certain metrics of effectiveness contributed to calling a democracy a democracy. We also see that even non-democracies have elections, so simply stating that "elections means democracy" is incorrect. Now that's a whole other can of worms, but that'll do for now.
+```
+
+2. Choose another variable which should cause the outcome according to some
+   theory or another. I'm calling it $z_i$ (again where $i$ indexes country).
+   (If you can state the theory, great. If not, then just an intuition about why
+   $z_i \rightarrow y_i$ will work. It is ok if you yourself don't think $z_i$
+   should relate to $y_i$, but someone should. There should be something at
+   stake in learning about this relationship.) This variable, which I'll call
+   the "explanatory variable" should have fewer than 4 values although it can be
+   nominal (i.e. categorical binary), ordinal, categorical (i.e. no specific
+   ordering), or even interval (like counts 0,1,2,3).  Please describe this
+   variable (you can use words, tables, single numbers, etc.. to describe this
+   variable alone, in one-dimension). What do these descriptions mean in
+   substantive terms about countries? 
+
+The most important thing to keep in mind is the ever-present potential for reverse causality, particularly for issues like democracy. For example, if we say that press freedoms cause democracy (a very large simplification), it is equally possible that we observe high press freedoms in democracies because they are democracies, and not the other way around. What we want, then, is a way to limit variables and data which might tamper with our analysis. Commonly, a linear regression with a bunch of potentially relevant variables (in excess, it becomes a kitchen sink regression) is a method of trying to "control" for omitted variable bias. Since the task at hand is only asking for two (Y ~ X), let's try to find a variable which works best within our constraints. We saw earlier that government by election itself does not signify a democracy. Instead, let's use a variable which measures the electoral integrity of a state and see the relationship with democracy: whether the votes were counted fairly (there's a saying that in non-democracies it's not who votes but who counts the vote that matters!).
+
+```{r q2}
+dat$fairc <- floor(dat$PEI_faircount)
+dat$fairc2 <- ifelse(dat$fairc<3, 1, ifelse(dat$fairc==3, 2, ifelse(dat$fairc>3, 3, dat$fairc)))
+ftable(dat$fairc2)
+
+##We recode the data into 3 categories: unfair, partly fair, fair. In addition, we use the "floor" function to round down the numbers to the closest integer below.
+dat$fairc3 <- ceiling(dat$PEI_faircount)
+dat$fairc3 <- ifelse(dat$fairc3<3, 1, ifelse(dat$fairc3==3, 2, ifelse(dat$fairc3>3, 3, dat$fairc3)))
+
+table(dat$fairc, dat$dddem_f) ##Original
+table(dat$fairc2, dat$dddem_f) ##Recoded
+
+v1 <- ggplot(data=subset(dat, !is.na(fairc2)), aes(x=as.factor(fairc2), fill=dddem_f)) + geom_bar(position="dodge")+ labs(title="Were Votes Counted Fairly (1-3 Scale Round Down)", x= "Fairly Counted Scale", fill="Democracy")
+
+v2 <- ggplot(data=subset(dat, !is.na(fairc3)), aes(x=as.factor(fairc3), fill=dddem_f)) + geom_bar(position="dodge")+ labs(title="Were Votes Counted Fairly (1-3 Scale Round Up)", x= "Fairly Counted Scale", fill="Democracy")
+plot_grid(v1, v2, nrow=1, ncol=2)
+##We see significant differences between using floor and ceiling. Might there be a way to round up if more than X.5 and down if less than X.5? Yes, the signif() command.
+dat$fairc4 <- signif(dat$PEI_faircount, digits=1)
+ftable(dat$fairc4) ##success!
+dat$fairc4 <- ifelse(dat$fairc4<3, 1, ifelse(dat$fairc4==3, 2, ifelse(dat$fairc4>3, 3, dat$fairc4)))
+
+v3 <- ggplot(data=subset(dat, !is.na(fairc4)), aes(x=as.factor(fairc4), fill=dddem_f)) + geom_bar(position="dodge")+ labs(title="Were Votes Counted Fairly (1-3 Scale)", x= "Fairly Counted Scale", fill="Democracy")
+plot_grid(v1, v2, v3, nrow=1, ncol=3)
+##I'll use the last one moving forward.
+
+```
+
+We observe that the vast majority of democracies fall under the "fairly counted" category (4-5 in the original coding); interestingly, non-democracies are more evenly spread out with some even having "fairly counted" elections! Surely there must be something else, but again, that might be outside the scope of this exercise.
+
+
+3. Please describe the relationship between $y_i$ and $z_i$ using at least one
+   graph and at least two tabular or numerical methods but not using any linear
+   model. Explain why you made the choices you made. (For example, if you
+   considered a third and fourth approach to linear description, explain why you
+   didn't use those approaches and instead chose the ones that you did.) Notice
+   that these are all the countries of the world: the whole population of
+   countries. Not a sample. Please interpret the results of these three
+   different analyses. What do we learn about countries in the world and/or
+   about the theory that lead you to do this analysis?
+   
+```{r q3}
+##Ascertaining a relationship
+##Relationship between fairly counting votes and whether or not it is deemed a democracy
+##Reprinting graph
+print(v3)
+table(dat$fairc4, dat$dddem_f)
+prop.table(table(dat$fairc4, dat$dddem_f))
+##We observe that the majority of democracies fall within Cat 3 "fair." There are, however, some democracies which fall into the vote counting process as being either partly fair or unfair! It'd be nice to see which countries those are.
+aa <- dat[dat$fairc4==1 & dat$dddem_f==1,]
+##We see the two countries in question are Armenia and Kenya.
+aa2 <- dat[dat$fairc4==2 & dat$dddem_f==1,]
+table(aa2$nation)
+##A list of nations which are partly fair and democracies.
+aa3 <- dat[dat$fairc4==3 & dat$dddem_f==0,]
+table(aa3$nation)
+##A list of nations which are fair and not democracies.
+
+##We could also, by recoding the data to be even simpler but lacking nuance, create conditions for a Fisher's exact test.
+dat$fairc5 <- signif(dat$PEI_faircount, digits=1)
+dat$fairc5 <- ifelse(dat$fairc5<4, 0, 1)
+ftable(dat$fairc5)
+fisher.test(dat$fairc5, dat$dddem_f)
+##Also, a chi-squared test of independence (though it tells us similar things with Fisher's)
+chisq <- chisq.test(dat$dddem_f, dat$fairc5)
+chisq$observed
+chisq$expected
+chisq$residuals
+library(corrplot)
+corrplot(chisq$residuals, is.cor = FALSE)
+```
+First, I created a bar graph which basically visualizes the data tables (i.e. democracy but unfair, non-democratic but fair, etc.). In addition, the correlation plot with the residuals from the chi-square test indicate that there is a negative correlation between being a democracy and being unfair in vote collection (and vice versa). If anything, this isn't really all that surprising, but as mentioned previously, this is not any indication of the direction of causality; there is a relationship (potentially) sure, but there isn't anything to tell us whether $Yi \rightarrow Zi$ or $Zi \rightarrow Yi$. 
+   
+
+4.  Choose another variable that should also relate to $y_i$ and perhaps to
+    $z_i$.  This variable, which I'll call it $x_i$, should have between 2 and 4
+    categories.  It could be ordinal or just categorical. Please ensure that R
+    understands this variable as a factor variable. You may need to create this
+    variable yourself, for example, if you want to convert something like the
+    Policy Standardized Score into categories. Or if you just want to take a
+    variable that has few categories and convert it into a factor using
+    `factor()` or `as.factor()`. Please describe this variable (you can use
+    words, tables, single numbers, etc.. to describe this variable alone, in
+    one-dimension). What does this description tell you about the countries of
+    the world?
+  
+```{r q4}
+##We'll use the variable 'PEI_choice: Voters were offered a genuine choice at the ballot box"
+
+summary(dat$PEI_choice)
+dat$choice <- signif(dat$PEI_choice, digits=1)
+dat$choice <- ifelse(dat$choice<3, 1, ifelse(dat$choice==3, 2, ifelse(dat$choice>3, 3, dat$choice)))
+ftable(dat$choice)
+
+v4 <- ggplot(data=subset(dat, !is.na(choice)), aes(x=as.factor(choice), fill=dddem_f)) + geom_bar(position="dodge")+ labs(title="Were Voters Given a Genuine Choice (1-3 Scale)", x= "Genuine Choice?", fill="Democracy")
+
+##We see, again, that voters in both democratic and non-democratic regimes were given genuine choices.
+table(dat$choice, dat$dddem_f)
+prop.table(table(dat$choice, dat$dddem_f))
+##Of interest? The one country which is democratic but does not give a genuine choice.
+bb <- dat[dat$choice==1 & dat$dddem_f==1,]
+table(bb$nation)
+##The Philippines!
+bb2 <- dat[dat$choice==3 & dat$dddem_f==0,]
+table(bb2$nation)
+##The countries which are undemocratic but provide genuine choices to voters. Fascinating, no?
+
+##Finally, relationship between Zi and xi?
+ftable(dat$choice, dat$fairc4)
+prop.table(ftable(dat$choice, dat$fairc4))
+chisq2 <- chisq.test(dat$choice, dat$fairc4)
+chisq2$observed
+chisq2$expected
+chisq2$residuals
+corrplot(chisq2$residuals, is.cor = FALSE)
+##Some degree of correlation between Xi & Zi.
+```
+Like variable Zi, we observe that both democratic and non-democratic countries provided genuine choices to their constituents. When comparing the relationship between Xi and Zi, we also see that although there is correlation between the variables, the relationships are not necessarily as clear-cut as we might expect. Again, considering the extremely varied number of variables which go into determining whether a country is a democracy or not (think Polity IV or FH), I'm not surprised in the slightest that single-issue snapshots like electoral processes are insufficient to tell the whole picture.
+
+5. Please describe the relationship between this variable and $y_i$ using least
+   squares. This relationship will probably involve `lm()` or
+   `estimatr::lm_robust()` to take the categorical variable can convert it into
+   a series of indicator variables with 1="in category" and 0="not in category".
+   Recall that the constant in such a summary is the mean outcome for the
+   excluded category (either least squares command will exclude one of the
+   categories) and that the other coefficients are the differences between the
+   mean outcomes of the excluded category and each other category. 
+
+```{r}
+library(MASS)
+library(AER)
+library(stargazer)
+lm1 <- lm(as.numeric(dddem) ~ choice, data=dat)
+summary(lm1)
+ct<- coeftest(lm1, vcov. = vcovHC, type = "HC1")
+##"coeftest is a generic function for performing z and (quasi-)t Wald tests of estimated coefficients." Some interesting functions which may prove useful in the future:
+ct
+AIC(lm1, ct)
+BIC(lm1, ct)
+##AIC & BIC for model selections
+
+##Checking for reverse causality
+lm2 <- lm(choice ~ as.numeric(dddem), data=dat)
+summary(lm2)
+ct2<- coeftest(lm2, vcov. = vcovHC, type = "HC1")
+AIC(lm2, ct2)
+BIC(lm2, ct2)
+##The AIC is a bit higher for this, though with only one variable and a small dataset it's hard to really infer much from this.
+
+##plotting data with jitter
+jitter <- position_jitter(width = 0.1, height = 0.1)
+ggplot(dat, aes(x=choice, y=as.numeric(dddem))) + geom_point(position = jitter) + geom_smooth(method="lm",  aes(fill=dddem_f))
+
+##That is one weird looking graph...! Hard to really say anything about it. Thoughts??
+```
+We see a relationship between the level of actual voter choice in elections with whether a regime is a democracy. Again, direction of causality is uncertain. The coefficient value represents the mean change in the response given a one unit change in the predictor. The positive coefficients tell us that with each unit increase in Xi, there is a positive increase in Yi. We could also graph the intercept onto a scatter plot.
+
+```{r lm plot with line}
+ggplot(dat, aes(x=choice, y=as.numeric(dddem))) + geom_point(position = jitter)+ geom_abline(intercept = 0.684, col="blue")
+##Still a strange graph, but better than the default geom_smooth?
+```
+
+6. Please also describe the relationship between $y_i$ and $z_i$ conditional on
+   $x_i$. That is, if `x` is a factor variable and `y` and `z` are numeric
+   variable that are (more or less) continuous, fit and interpret the
+   coefficients (and/or predictions) from a linear model, such as that produced
+   by `lm` or `lmrob` or `rlm` or `rq` using the formula `y~z*x` (where the `*`
+   creates an "interaction term" between `z` and `x`. Feel free to use plots to
+   make this interpretation in addition to the coefficients. What do these
+   results tell you in substantive terms about how the $z \rightarrow y$
+   relationship might depend on levels of $x$?  Recall again that the
+   coefficients in a linear least squares model, at least, can be interpreted as
+   either proportions or differences in proportions for $y \in \{0,1\}$ (that is
+   for a variable $y$ that only takes on values of 0 and 1.
+
+```{r q6}
+lm3 <- lm(as.numeric(dddem) ~ fairc4 + choice, data=dat)
+ct3 <- coeftest(lm3, vcov. = vcovHC, type = "HC1")
+summary(lm3)
+lm4 <- lm(as.numeric(dddem) ~ fairc4 * choice, data=dat)
+summary(lm4)
+ct4 <- coeftest(lm4, vcov. = vcovHC, type = "HC1")
+ct4
+lm5 <-  lm(as.numeric(dddem) ~ fairc4 + choice + (fairc4*choice), data=dat)
+ct5 <- coeftest(lm5, vcov. = vcovHC, type = "HC1") 
+##is there a difference? Probably not, but why not check. After checking, we see R treats LM5 and LM4 the same.
+
+
+##comparing models
+AIC(lm1, ct)
+AIC(lm3, ct3)
+AIC(lm4, ct4)
+##AIC for LM4 is slightly lower than LM3 and much lower than LM1.
+stargazer(lm1, lm3, lm4, type="text")
+stargazer(ct, ct3, ct4,  type="text")
+##Following from: https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_interactions.html 
+library(sjPlot)
+library(sjmisc)
+theme_set(theme_sjplot())
+# fit model with interaction
+fe1 <- plot_model(lm1) ##fixed effects
+fe2 <- plot_model(lm3)
+fe3 <- plot_model(lm4)
+p1<- plot_model(lm1, type= "pred")
+p2<- plot_model(lm3, type= "pred")
+i1<- plot_model(lm4, type = "int")
+```
+We see, interestingly, that in our third model ("lm4") with the interaction effect we no longer observe a relationship between choice and count fairness with democracy that is below the $\alpha<0.5$ threshold. When a regression equation includes an interaction term, we should ask whether the interaction term contribute in a meaningful way to the explanatory power of the equation, which we can accomplish by a) "Assessing the statistical significance of the interaction term"; b) "Comparing the coefficient of determination with and without the interaction term." (Stat Trek, https://stattrek.com/multiple-regression/interaction.aspx) Let's do that here.
+
+```{r}
+stargazer(ct, ct3, ct4, type="text")
+stargazer(lm1, lm3, lm4, type="text")
+
+```
+We see that with each additional explanatory variable, the coefficient for Xi/Zi gets smaller, meaning less change in Yi is being attributed to Xi/Zi; conversly, we see the $R^2$ increase, though this is less to do with the predictive power of the model per se and more to do with increasing the number of variables involved. In addition, and perhaps most illustrating, is the plot "i1" which plots the predicted values of "dddem" (democracy or not) on an interaction plot; we see that the lines are not parallel, which leads us to guess that there is an interaction effect. We've seen previously that there is a degree of correlation between voters' having a genuine choice and voters having their ballots counted fairly, and that there is correlation between all three variables. Again, although it may not be at the heart of this exploration, we have no way of asserting causality here simply because of the tautological nature of the variables with democracy.
+
+
+
+
+# References
